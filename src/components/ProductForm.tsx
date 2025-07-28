@@ -248,7 +248,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, product, onS
       if (product) {
         // Update existing product
         await updateProduct(product.id, formData);
-        alert('Produto atualizado com sucesso!');
       } else {
         // Create new product
         const newProduct = await createProduct(formData);
@@ -266,18 +265,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ isOpen, onClose, product, onS
         // For now, we'll just show a message about the images
         if (productImages.length > 0) {
           console.log(`${productImages.length} imagens selecionadas para o produto ${newProduct.id}`);
-          console.log(`${productImages.length} imagens foram selecionadas para upload futuro.`);
+          alert(`Produto criado com sucesso! ${productImages.length} imagens foram selecionadas (upload seria implementado em produção).`);
         }
-        
-        alert('Produto criado com sucesso!');
       }
       
       onSave();
       onClose();
     } catch (error) {
       console.error('Error saving product:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      alert(`Erro ao salvar produto: ${errorMessage}`);
+      alert('Erro ao salvar produto. Tente novamente.');
     } finally {
       setLoading(false);
     }

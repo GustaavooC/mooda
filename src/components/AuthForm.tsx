@@ -45,36 +45,29 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
           throw new Error('As senhas não coincidem');
         }
 
-        if (formData.password.length < 6) {
-          throw new Error('A senha deve ter pelo menos 6 caracteres');
-        }
-
-        const result = await signUp(formData.email, formData.password, {
+        const { error } = await signUp(formData.email, formData.password, {
           name: formData.name,
           store_name: formData.storeName,
           store_slug: formData.storeSlug,
         });
-        if (result.error) throw new Error(result.error.message || 'Erro ao criar conta');
+
+        if (error) throw error;
       } else {
-        const result = await signIn(formData.email, formData.password);
-        if (result.error) throw new Error(result.error.message || 'Credenciais inválidas');
+        const { error } = await signIn(formData.email, formData.password);
+        if (error) throw error;
       }
 
       // Redirecionar após login bem-sucedido
       if (onSuccess) {
         onSuccess();
       } else {
-        // Aguardar um pouco para garantir que o estado do usuário foi atualizado
-        setTimeout(() => {
-          if (mode === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 100);
+        if (mode === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
-      console.error('Auth error:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);

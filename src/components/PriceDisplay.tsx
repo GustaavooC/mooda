@@ -8,7 +8,6 @@ interface PriceDisplayProps {
   onAuthRequired: () => void;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
-  showLoginPrompt?: boolean;
 }
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({
@@ -17,8 +16,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
   isAuthenticated,
   onAuthRequired,
   className = '',
-  size = 'md',
-  showLoginPrompt = true
+  size = 'md'
 }) => {
   const sizeClasses = {
     sm: 'text-sm',
@@ -32,7 +30,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
     lg: 'w-5 h-5'
   };
 
-  if (!isAuthenticated && showLoginPrompt) {
+  if (!isAuthenticated) {
     return (
       <div className={`${className}`}>
         <button
@@ -42,14 +40,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({
           <Lock className={lockSizeClasses[size]} />
           Faça login para ver o preço
         </button>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated && !showLoginPrompt) {
-    return (
-      <div className={`${sizeClasses[size]} text-gray-500 ${className}`}>
-        Preço disponível após login
       </div>
     );
   }

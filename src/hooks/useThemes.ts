@@ -260,10 +260,9 @@ export const useThemes = () => {
         .from('store_themes')
         .select('*')
         .eq('tenant_id', currentTenant.id)
-        .maybeSingle();
+        .single();
 
-      if (error && error.code !== 'PGRST116' && error.code !== '42501') {
-        console.error('Error fetching theme:', error);
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
@@ -286,16 +285,7 @@ export const useThemes = () => {
       }
     } catch (err) {
       console.error('Error fetching current theme:', err);
-      // Use default theme as fallback
-      const defaultTheme = themes[0];
-      setCurrentTheme({
-        id: 'fallback',
-        tenant_id: currentTenant.id,
-        theme_id: defaultTheme.id,
-        applied_at: new Date().toISOString(),
-        theme: defaultTheme
-      });
-      console.warn('Using fallback theme due to error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch theme');
     } finally {
       setLoading(false);
     }

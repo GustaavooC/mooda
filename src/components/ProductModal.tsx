@@ -1,33 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Plus, Minus, ShoppingCart, Heart, Star } from 'lucide-react';
-import PriceDisplay from './PriceDisplay';
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  brand?: string;
-  category?: {
-    name: string;
-  };
-  variations: ProductVariation[];
-}
-
-interface ProductVariation {
-  id: string;
-  price: number;
-  promotional_price?: number;
-  stock_quantity: number;
-  color: {
-    id: string;
-    name: string;
-    hex_code: string;
-  };
-  size: {
-    id: string;
-    name: string;
-  };
-}
+import { Product, ProductVariation } from '../hooks/useProducts';
 
 interface ProductModalProps {
   product: Product;
@@ -36,99 +9,77 @@ interface ProductModalProps {
   onAddToCart: (product: Product, variation: ProductVariation, quantity: number) => void;
 }
 
-const ProductModal: React.FC<ProductModalProps> = ({
-  product,
-  isOpen,
-  onClose,
-  onAddToCart
-}) => {
+const ProductModal: React.FC<ProductModalProps> = ({ product, isOpen, onClose, onAddToCart }) => {
   const [selectedColorId, setSelectedColorId] = useState<string>('');
   const [selectedSizeId, setSelectedSizeId] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
-  const [addToCartLoading, setAddToCartLoading] = useState(false);
 
-  // Reset selections when product changes
-  useEffect(() => {
-    if (product && isOpen) {
-      setSelectedColorId('');
-      setSelectedSizeId('');
-      setQuantity(1);
+  if (!isOpen || !product.variations) return null;
+
+  const availableVariations = product.variations.filter(v => v.stock_quantity > 0);
+  
+  // Get unique colors from available variations
+  const availableColors = availableVariations.reduce((colors, variation) => {
+    if (!colors.find(c => c.id === variation.color_id) && variation.color) {
+      colors.push(variation.color);
     }
-  }, [product, isOpen]);
+    return colors;
+  }, [] as Array<{ id: string; name: string; hex_code: string }>);
 
-  if (!isOpen || !product) return null;
+  // Get available sizes for selected color
+  const availableSizesForColor = selectedColorId 
+    ? availableVariations.filter(v => v.color_id === selectedColorId)
+    : [];
 
-  const getAvailableColors = () => {
-    if (!product.variations) return [];
-    
-    const availableVariations = product.variations.filter(v => v.stock_quantity > 0);
-    const colorIds = [...new Set(availableVariations.map(v => v.color.id))];
-    
-    return colorIds.map(colorId => {
-      const variation = availableVariations.find(v => v.color.id === colorId);
-      return variation?.color;
-    }).filter(Boolean);
-  };
+  const selectedVariation = availableVariations.find(
+    v => v.color_id === selectedColorId && v.size_id === selectedSizeId
+  );
 
-  const getAvailableSizesForColor = () => {
-    if (!selectedColorId) return [];
-    
-    return product.variations?.filter(v => 
-      v.color.id === selectedColorId && v.stock_quantity > 0
-    ) || [];
-  };
-
-  const getSelectedVariation = () => {
-    if (!selectedColorId || !selectedSizeId) return null;
-    
-    return product.variations?.find(v => 
-      v.color.id === selectedColorId && v.size.id === selectedSizeId
-    ) || null;
-  };
+  const maxQuantity = selectedVariation ? selectedVariation.stock_quantity : 0;
 
   const handleColorSelect = (colorId: string) => {
     setSelectedColorId(colorId);
-    setSelectedSizeId('');
+    setSelectedSizeId(''); // Reset size when color changes
     setQuantity(1);
   };
 
-  const handleAddToCart = async () => {
-    const variation = getSelectedVariation();
-    if (!variation) return;
-
-    setAddToCartLoading(true);
-    
-    // Simulate loading for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    onAddToCart(product, variation, quantity);
-    setAddToCartLoading(false);
-    onClose();
+  const handleSizeSelect = (sizeId: string) => {
+    setSelectedSizeId(sizeId);
+    setQuantity(1);
   };
 
-  const availableColors = getAvailableColors();
-  const availableSizes = getAvailableSizesForColor();
-  const selectedVariation = getSelectedVariation();
-  const maxQuantity = selectedVariation?.stock_quantity || 0;
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity >= 1 && newQuantity <= maxQuantity) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (selectedVariation) {
+      onAddToCart(product, selectedVariation, quantity);
+      onClose();
+    }
+  };
+
+  const getPrice = () => {
+    if (!selectedVariation) return 'Selecione uma variação';
+    return selectedVariation.promotional_price 
+      ? `R$ ${selectedVariation.promotional_price.toFixed(2)}`
+      : `R$ ${selectedVariation.price.toFixed(2)}`;
+  };
+
+  const getOriginalPrice = () => {
+    if (!selectedVariation || !selectedVariation.promotional_price) return null;
+    return `R$ ${selectedVariation.price.toFixed(2)}`;
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-900">{product.name}</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Product Image */}
-            <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        <div className="flex">
+          {/* Product Image */}
+          <div className="flex-1 bg-gray-100 aspect-square relative">
+            <div className="w-full h-full flex items-center justify-center">
               <div className="text-gray-400 text-center">
                 <div className="w-24 h-24 mx-auto mb-4 opacity-50">
                   <svg fill="currentColor" viewBox="0 0 24 24">
@@ -138,150 +89,152 @@ const ProductModal: React.FC<ProductModalProps> = ({
                 <p className="text-lg">Imagem do produto</p>
               </div>
             </div>
+            
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {/* Product Details */}
-            <div className="space-y-6">
-              {/* Basic Info */}
-              <div>
-                {product.brand && (
-                  <p className="text-sm text-gray-600 mb-2">{product.brand}</p>
-                )}
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-                {product.description && (
-                  <p className="text-gray-700 leading-relaxed">{product.description}</p>
-                )}
+          {/* Product Details */}
+          <div className="flex-1 p-8 overflow-y-auto max-h-[90vh]">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h1>
+              {product.brand && (
+                <p className="text-lg text-gray-600 mb-4">{product.brand}</p>
+              )}
+              
+              <div className="flex items-center mb-4">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-current" />
+                  ))}
+                </div>
+                <span className="text-gray-600 ml-2">(0 avaliações)</span>
               </div>
 
-              {/* Price */}
-              <div className="border-t border-b py-4">
-                {selectedVariation ? (
-                  <PriceDisplay
-                    price={selectedVariation.price}
-                    promotionalPrice={selectedVariation.promotional_price}
-                    isAuthenticated={true}
-                    onAuthRequired={() => {}}
-                    size="lg"
-                  />
-                ) : (
-                  <div className="text-gray-500">
-                    Selecione cor e tamanho para ver o preço
-                  </div>
-                )}
+              <div className="mb-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-3xl font-bold text-gray-900">{getPrice()}</span>
+                  {getOriginalPrice() && (
+                    <span className="text-xl text-gray-500 line-through">{getOriginalPrice()}</span>
+                  )}
+                </div>
               </div>
+            </div>
 
-              {/* Color Selection */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Cor {selectedColorId && `(${availableColors.find(c => c?.id === selectedColorId)?.name})`}
-                </h3>
+            {/* Color Selection */}
+            {availableColors.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Cor</h3>
                 <div className="flex flex-wrap gap-3">
                   {availableColors.map((color) => (
                     <button
-                      key={color?.id}
-                      onClick={() => handleColorSelect(color?.id || '')}
-                      className={`w-12 h-12 rounded-full border-2 transition-all ${
-                        selectedColorId === color?.id
-                          ? 'border-blue-500 ring-2 ring-blue-200'
+                      key={color.id}
+                      onClick={() => handleColorSelect(color.id)}
+                      className={`flex items-center gap-2 px-4 py-2 border-2 rounded-lg transition-all ${
+                        selectedColorId === color.id
+                          ? 'border-blue-600 bg-blue-50'
                           : 'border-gray-300 hover:border-gray-400'
                       }`}
-                      style={{ backgroundColor: color?.hex_code }}
-                      title={color?.name}
-                    />
+                    >
+                      <div
+                        className="w-6 h-6 rounded-full border border-gray-300"
+                        style={{ backgroundColor: color.hex_code }}
+                      />
+                      <span className="font-medium">{color.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Size Selection */}
-              {selectedColorId && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                    Tamanho {selectedSizeId && `(${availableSizes.find(s => s.size.id === selectedSizeId)?.size.name})`}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {availableSizes.map((variation) => (
-                      <button
-                        key={variation.id}
-                        onClick={() => setSelectedSizeId(variation.size.id)}
-                        className={`px-4 py-2 border rounded-lg font-medium transition-all ${
-                          selectedSizeId === variation.size.id
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
-                      >
-                        {variation.size.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quantity and Stock */}
-              {selectedVariation && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">Quantidade</h3>
-                    <span className="text-sm text-gray-600">
-                      {selectedVariation.stock_quantity} em estoque
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
+            {/* Size Selection */}
+            {selectedColorId && availableSizesForColor.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Tamanho</h3>
+                <div className="flex flex-wrap gap-2">
+                  {availableSizesForColor.map((variation) => (
                     <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      key={variation.id}
+                      onClick={() => handleSizeSelect(variation.size_id)}
+                      className={`px-4 py-2 border-2 rounded-lg font-medium transition-all ${
+                        selectedSizeId === variation.size_id
+                          ? 'border-blue-600 bg-blue-50 text-blue-600'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
                     >
-                      <Minus className="w-4 h-4" />
+                      {variation.size?.name}
                     </button>
-                    <span className="text-xl font-semibold px-4">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-                      disabled={quantity >= maxQuantity}
-                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              )}
-
-              {/* Add to Cart Button */}
-              <div className="pt-4">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!selectedVariation || addToCartLoading || maxQuantity === 0}
-                  className="w-full py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {addToCartLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      Adicionando...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-5 h-5" />
-                      {!selectedVariation 
-                        ? 'Selecione cor e tamanho' 
-                        : maxQuantity === 0 
-                        ? 'Fora de estoque'
-                        : `Adicionar ao carrinho - R$ ${((selectedVariation.promotional_price || selectedVariation.price) * quantity).toFixed(2)}`
-                      }
-                    </>
-                  )}
-                </button>
               </div>
+            )}
 
-              {/* Additional Info */}
-              <div className="text-sm text-gray-600 space-y-2">
-                {product.category && (
-                  <p>
-                    <span className="font-medium">Categoria:</span> {product.category.name}
-                  </p>
-                )}
-                <p>
-                  <span className="font-medium">Variações disponíveis:</span> {product.variations?.length || 0}
-                </p>
+            {/* Quantity Selection */}
+            {selectedVariation && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Quantidade</h3>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleQuantityChange(quantity - 1)}
+                    disabled={quantity <= 1}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="px-4 py-2 border border-gray-300 rounded-lg font-medium min-w-[3rem] text-center">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => handleQuantityChange(quantity + 1)}
+                    disabled={quantity >= maxQuantity}
+                    className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <span className="text-sm text-gray-600 ml-2">
+                    ({maxQuantity} disponível{maxQuantity !== 1 ? 'is' : ''})
+                  </span>
+                </div>
               </div>
+            )}
+
+            {/* Description */}
+            {product.description && (
+              <div className="mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">Descrição</h3>
+                <p className="text-gray-700 leading-relaxed">{product.description}</p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-4 pt-6 border-t">
+              <button
+                onClick={handleAddToCart}
+                disabled={!selectedVariation}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-6 rounded-lg font-medium transition-all ${
+                  selectedVariation
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                Adicionar ao Carrinho
+              </button>
+              
+              <button className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <Heart className="w-5 h-5" />
+              </button>
             </div>
+
+            {!selectedVariation && selectedColorId && (
+              <p className="text-amber-600 text-sm mt-2">
+                Selecione um tamanho para continuar
+              </p>
+            )}
           </div>
         </div>
       </div>

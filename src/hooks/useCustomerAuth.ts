@@ -44,26 +44,6 @@ export const useCustomerAuth = (tenantId?: string) => {
     try {
       console.log('Attempting sign in for:', { email, tenantId });
 
-      // Para usuários demo, simular autenticação
-      if (tenantId.includes('-') && tenantId.length === 36) {
-        // Simular delay de autenticação
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const mockCustomer = {
-          id: `demo-customer-${Date.now()}`,
-          tenant_id: tenantId,
-          email: email,
-          name: email.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          phone: '(11) 99999-9999'
-        };
-        
-        // Store customer data in localStorage
-        localStorage.setItem(`customer_${tenantId}`, JSON.stringify(mockCustomer));
-        setCustomer(mockCustomer);
-        
-        return { data: mockCustomer, error: null };
-      }
-
       // Usar a função RPC para verificar se customer existe
       const { data: customerData, error } = await supabase
         .rpc('check_customer_exists', {
@@ -116,26 +96,6 @@ export const useCustomerAuth = (tenantId?: string) => {
         name: customerData.name,
         tenantId 
       });
-
-      // Para usuários demo, simular criação de conta
-      if (tenantId.includes('-') && tenantId.length === 36) {
-        // Simular delay de criação
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        const newCustomer = {
-          id: `demo-customer-${Date.now()}`,
-          tenant_id: tenantId,
-          email: customerData.email,
-          name: customerData.name,
-          phone: customerData.phone || ''
-        };
-        
-        // Store customer data in localStorage
-        localStorage.setItem(`customer_${tenantId}`, JSON.stringify(newCustomer));
-        setCustomer(newCustomer);
-        
-        return { data: newCustomer, error: null };
-      }
 
       // Usar a função RPC para criar customer com validação
       const { data: result, error } = await supabase

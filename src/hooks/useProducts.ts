@@ -349,24 +349,6 @@ export const useProducts = (tenantId?: string) => {
       console.log('Creating product for tenant:', activeTenantId);
       console.log('Product data:', product);
       
-      // Para usuários demo, simular criação
-      if (user?.tenantSlug) {
-        const newProduct: Product = {
-          id: `demo-product-${Date.now()}`,
-          ...product,
-          tenant_id: activeTenantId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          variations: [],
-          images: []
-        };
-        
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        return newProduct;
-      }
-      
       const { data, error } = await supabase
         .from('products')
         .insert([{ 
@@ -399,22 +381,6 @@ export const useProducts = (tenantId?: string) => {
       console.log('Creating variation for tenant:', activeTenantId);
       console.log('Variation data:', variation);
       
-      // Para usuários demo, simular criação
-      if (user?.tenantSlug) {
-        const newVariation: ProductVariation = {
-          id: `demo-variation-${Date.now()}`,
-          ...variation,
-          tenant_id: activeTenantId,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        return newVariation;
-      }
-      
       const { data, error } = await supabase
         .from('product_variations')
         .insert([{ 
@@ -443,20 +409,6 @@ export const useProducts = (tenantId?: string) => {
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
       console.log('Updating product:', id, updates);
-      
-      // Para usuários demo, simular atualização
-      if (user?.tenantSlug) {
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const updatedProduct = {
-          id,
-          ...updates,
-          updated_at: new Date().toISOString()
-        };
-        
-        return updatedProduct;
-      }
       
       const { data, error } = await supabase
         .from('products')
@@ -487,14 +439,6 @@ export const useProducts = (tenantId?: string) => {
     try {
       console.log('Deleting product:', id);
       
-      // Para usuários demo, simular exclusão
-      if (user?.tenantSlug) {
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 300));
-        console.log('Product deleted successfully (demo mode)');
-        return;
-      }
-      
       const { error } = await supabase
         .from('products')
         .delete()
@@ -518,21 +462,6 @@ export const useProducts = (tenantId?: string) => {
     if (!activeTenantId) throw new Error('No tenant selected');
     
     try {
-      // Para usuários demo, simular criação
-      if (user?.tenantSlug) {
-        const newCategory: Category = {
-          id: `demo-category-${Date.now()}`,
-          ...category,
-          tenant_id: activeTenantId,
-          created_at: new Date().toISOString()
-        };
-        
-        // Simular delay
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        return newCategory;
-      }
-      
       const { data, error } = await supabase
         .from('categories')
         .insert([{ 

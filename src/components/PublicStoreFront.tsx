@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { ShoppingCart, Search, Filter, Heart, Star, Eye, Plus, Minus, X, User, LogOut, Lock, Menu } from 'lucide-react';
+import { ShoppingCart, Search, Filter, Heart, Star, Eye, Plus, Minus, X, User, LogOut, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCustomerAuth } from '../hooks/useCustomerAuth';
 import { useCustomization } from '../hooks/useCustomization';
 import { useThemes } from '../hooks/useThemes';
 import CustomerAuthModal from './CustomerAuthModal';
 import PriceDisplay from './PriceDisplay';
-import ProductModal from './ProductModal';
 
 interface Tenant {
   id: string;
@@ -79,7 +78,6 @@ const PublicStoreFront: React.FC = () => {
   const { currentTheme } = useThemes();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authSuccess, setAuthSuccess] = useState(false);
   
@@ -585,30 +583,8 @@ const PublicStoreFront: React.FC = () => {
     openProductModal(product);
   };
 
-  const handleAddToCart = (product: Product, variation: ProductVariation, quantity: number) => {
-    if (!isAuthenticated) {
-      setShowAuthModal(true);
-      return;
-    }
-
-    // Add to cart logic
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.variation.id === variation.id);
-      
-      if (existingItem) {
-        return prevCart.map(item =>
-          item.variation.id === variation.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      
-      return [...prevCart, { product, variation, quantity }];
-    });
-
-    // Show success feedback
-    setAuthSuccess(true);
-    setTimeout(() => setAuthSuccess(false), 2000);
+  const handleAddToCart = () => {
+    addToCart();
   };
 
   const handleSignIn = async (email: string, password: string) => {
@@ -644,15 +620,7 @@ const PublicStoreFront: React.FC = () => {
             themeConfig.layout.headerType === 'split' ? 'justify-between' :
             'justify-between'
           }`}>
-            <div className="flex items-center gap-3 flex-1">
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setShowMobileMenu(true)}
-                className="md:hidden p-2 text-white hover:text-opacity-80"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              
+            <div className="flex items-center gap-3">
               {storeCustomization?.logo_url ? (
                 <img 
                   src={storeCustomization.logo_url} 
@@ -676,348 +644,20 @@ const PublicStoreFront: React.FC = () => {
             
             {themeConfig.layout.headerType !== 'centered' && (
               <div className="flex items-center gap-4">
-                {/* User Menu */}
-                {isAuthenticated ? (
-                  <div className="hidden sm:flex items-center gap-3">
-                    <span className="text-white text-sm">Olá, {customer?.name}</span>
-                    <button
-                      onClick={handleSignOut}
-                      className="text-white hover:text-opacity-80 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowAuthModal(true)}
-                    className="hidden sm:block text-white hover:text-opacity-80 transition-colors"
-                  >
-                    Entrar
-                  </button>
-                )}
-                
-                {/* Cart */}
                 <button
-                  onClick={() => setShowCart(true)}
-                  className="flex items-center gap-2 text-white hover:text-opacity-80 transition-colors"
+                  onClick={() => setShowAuthModal(true)}
+                  className="text-white hover:text-opacity-80 transition-colors"
                 >
-                  <ShoppingCart className="w-5 h-5" />
-                  <span className="hidden sm:inline">Carrinho</span>
-                  {getTotalCartItems() > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {getTotalCartItems()}
-                    </span>
-                  )}
+                  {customer ? `Olá, ${customer.name}` : 'Entrar'}
                 </button>
+                <div className="text-white">
+                  🛒 Carrinho ({cartItems.length})
+                </div>
               </div>
             )}
           </div>
         </div>
       </header>
-
-      {/* Mobile Menu Overlay */}
-      {showMobileMenu && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 md:hidden">
-          <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-semibold text-gray-900">Menu</h2>
-              <button
-                onClick={() => setShowMobileMenu(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              {isAuthenticated ? (
-                <div className="pb-4 border-b">
-                  <p className="font-medium text-gray-900">{customer?.name}</p>
-                  <p className="text-sm text-gray-600">{customer?.email}</p>
-                  <button
-                    onClick={handleSignOut}
-                    className="mt-2 text-red-600 text-sm"
-                  >
-                    Sair
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setShowMobileMenu(false);
-                    setShowAuthModal(true);
-                  }}
-                  className="w-full text-left py-2 text-blue-600 font-medium"
-                >
-                  Entrar / Criar Conta
-                </button>
-              )}
-              
-              <button
-                onClick={() => {
-                  setShowMobileMenu(false);
-                  setShowCart(true);
-                }}
-                className="flex items-center gap-2 w-full text-left py-2"
-              >
-                <ShoppingCart className="w-5 h-5" />
-                Carrinho ({getTotalCartItems()})
-              </button>
-              
-              {categories.map(category => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setSelectedCategory(category.name);
-                    setShowMobileMenu(false);
-                  }}
-                  className="block w-full text-left py-2 text-gray-700"
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Message */}
-      {authSuccess && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50">
-          ✅ Produto adicionado ao carrinho!
-        </div>
-      )}
-
-      {/* Cart Sidebar */}
-      {showCart && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
-          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-lg">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Carrinho ({getTotalCartItems()})
-              </h2>
-              <button
-                onClick={() => setShowCart(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-4">
-              {cart.length === 0 ? (
-                <div className="text-center py-8">
-                  <ShoppingCart className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Seu carrinho está vazio</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {cart.map((item) => (
-                    <div key={item.variation.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{item.product.name}</h4>
-                        <p className="text-xs text-gray-600">
-                          {item.variation.color.name} - {item.variation.size.name}
-                        </p>
-                        <p className="text-sm font-semibold text-green-600">
-                          R$ {(item.variation.promotional_price || item.variation.price).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => updateCartQuantity(item.variation.id, item.quantity - 1)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-sm font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => updateCartQuantity(item.variation.id, item.quantity + 1)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                      <button
-                        onClick={() => removeFromCart(item.variation.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {cart.length > 0 && (
-              <div className="border-t p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="font-semibold">Total:</span>
-                  <span className="text-lg font-bold text-green-600">
-                    R$ {getCartTotal().toFixed(2)}
-                  </span>
-                </div>
-                <button
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      setShowCart(false);
-                      setShowAuthModal(true);
-                    } else {
-                      setShowCheckout(true);
-                    }
-                  }}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                >
-                  {isAuthenticated ? 'Finalizar Compra' : 'Entrar para Comprar'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Checkout Modal */}
-      {showCheckout && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Finalizar Compra</h2>
-              <button
-                onClick={() => setShowCheckout(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="space-y-6">
-                {/* Customer Info */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Dados do Cliente</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
-                      <input
-                        type="text"
-                        value={checkoutCustomer.name}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                      <input
-                        type="email"
-                        value={checkoutCustomer.email}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ ...prev, email: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
-                      <input
-                        type="tel"
-                        value={checkoutCustomer.phone}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ ...prev, phone: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Address Info */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Endereço de Entrega</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Rua</label>
-                      <input
-                        type="text"
-                        value={checkoutCustomer.address.street}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, street: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
-                      <input
-                        type="text"
-                        value={checkoutCustomer.address.city}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, city: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Estado</label>
-                      <input
-                        type="text"
-                        value={checkoutCustomer.address.state}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, state: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">CEP</label>
-                      <input
-                        type="text"
-                        value={checkoutCustomer.address.zipcode}
-                        onChange={(e) => setCheckoutCustomer(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, zipcode: e.target.value }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Summary */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Resumo do Pedido</h3>
-                  <div className="space-y-3">
-                    {cart.map((item) => (
-                      <div key={item.variation.id} className="flex justify-between items-center py-2 border-b">
-                        <div>
-                          <p className="font-medium">{item.product.name}</p>
-                          <p className="text-sm text-gray-600">
-                            {item.variation.color.name} - {item.variation.size.name} (x{item.quantity})
-                          </p>
-                        </div>
-                        <p className="font-semibold">
-                          R$ {((item.variation.promotional_price || item.variation.price) * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center py-2 font-semibold text-lg">
-                      <span>Total:</span>
-                      <span>R$ {getCartTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Checkout Button */}
-                <button
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  {checkoutLoading ? 'Processando...' : 'Confirmar Pedido'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Banner Principal */}
       {storeCustomization?.banner_main_url && (
@@ -1167,8 +807,7 @@ const PublicStoreFront: React.FC = () => {
                   {/* Price */}
                   <div className="flex items-center justify-between">
                     <PriceDisplay
-                      price={getProductPrice(product)?.minPrice}
-                      promotionalPrice={getProductPrice(product)?.hasRange ? undefined : getProductPrice(product)?.minPrice}
+                      price={getProductPrice(product)}
                       isAuthenticated={isAuthenticated}
                       onAuthRequired={() => setShowAuthModal(true)}
                       size="md"

@@ -259,64 +259,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signUp = async (email: string, password: string, name?: string) => {
-    try {
-      console.log('Attempting sign up for:', email);
-      
-      // Validações básicas
-      if (!email || !password) {
-        throw new Error('Email e senha são obrigatórios');
-      }
-      
-      if (password.length < 6) {
-        throw new Error('A senha deve ter pelo menos 6 caracteres');
-      }
-      
-      // Verificar se email já existe nos demos
-      const existingDemo = Object.keys(DEMO_CREDENTIALS).find(demoEmail => 
-        demoEmail.toLowerCase() === email.toLowerCase()
-      );
-      
-      if (existingDemo) {
-        throw new Error('Este email já está cadastrado. Faça login ou use outro email.');
-      }
-      
-      // Para novos usuários, tentar criar no Supabase
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-        options: {
-          data: {
-            name: name || email.split('@')[0]
-          }
-        }
     });
 
-      if (error) {
-        console.error('Supabase signup error:', error);
-        throw new Error(error.message || 'Erro ao criar conta');
-      }
+    if (error) return { data: null, error };
 
     if (data.user) {
       // Create user profile
-        try {
-          await supabase
+      await supabase
         .from('users')
         .insert({
           id: data.user.id,
           email: data.user.email!,
-            name: name || email.split('@')[0],
+          name,
         });
-        } catch (profileError) {
-          console.warn('Error creating profile:', profileError);
-          // Continue even if profile creation fails
-        }
     }
     
-      return { data, error: null };
-    } catch (err) {
-      console.error('Sign up error:', err);
-      return { data: null, error: err };
-    }
+    return { data, error: null };
   };
 
   const signOut = async () => {

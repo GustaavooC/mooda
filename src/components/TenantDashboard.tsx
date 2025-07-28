@@ -54,11 +54,8 @@ const TenantDashboard: React.FC = () => {
     if (window.confirm('Tem certeza que deseja excluir este produto?')) {
       try {
         await deleteProduct(productId);
-        await fetchProducts();
-        // Show success message
-        alert('Produto excluído com sucesso!');
+        fetchProducts();
       } catch (error) {
-        console.error('Error deleting product:', error);
         alert('Erro ao excluir produto');
       }
     }
@@ -75,11 +72,7 @@ const TenantDashboard: React.FC = () => {
   };
 
   const handleFormSave = () => {
-    fetchProducts().then(() => {
-      // Show success message
-      const message = selectedProduct ? 'Produto atualizado com sucesso!' : 'Produto criado com sucesso!';
-      alert(message);
-    });
+    fetchProducts();
     setShowProductForm(false);
     setSelectedProduct(null);
   };

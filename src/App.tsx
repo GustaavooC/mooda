@@ -7,11 +7,6 @@ import TenantDashboard from './components/TenantDashboard';
 import ProductList from './components/ProductList';
 import StoreCustomization from './components/StoreCustomization';
 import ThemeSelector from './components/ThemeSelector';
-import OrderManagement from './components/OrderManagement';
-import CustomerManagement from './components/CustomerManagement';
-import CategoryManagement from './components/CategoryManagement';
-import ReportsAnalytics from './components/ReportsAnalytics';
-import StoreSettings from './components/StoreSettings';
 import TenantLayout from './components/TenantLayout';
 import PublicStoreFront from './components/PublicStoreFront';
 import AuthForm from './components/AuthForm';
@@ -59,11 +54,56 @@ const DashboardWrapper: React.FC = () => {
         <Route path="/products" element={<ProductList />} />
         <Route path="/customization" element={<StoreCustomization />} />
         <Route path="/themes" element={<ThemeSelector />} />
-        <Route path="/categories" element={<CategoryManagement />} />
-        <Route path="/orders" element={<OrderManagement />} />
-        <Route path="/customers" element={<CustomerManagement />} />
-        <Route path="/reports" element={<ReportsAnalytics />} />
-        <Route path="/settings" element={<StoreSettings />} />
+        <Route path="/categories" element={
+          <TenantLayout title="Categorias" showBackButton={true}>
+            <div className="p-6">
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Categorias</h3>
+                <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </TenantLayout>
+        } />
+        <Route path="/orders" element={
+          <TenantLayout title="Pedidos" showBackButton={true}>
+            <div className="p-6">
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Pedidos</h3>
+                <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </TenantLayout>
+        } />
+        <Route path="/customers" element={
+          <TenantLayout title="Clientes" showBackButton={true}>
+            <div className="p-6">
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Clientes</h3>
+                <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </TenantLayout>
+        } />
+        <Route path="/reports" element={
+          <TenantLayout title="Relatórios" showBackButton={true}>
+            <div className="p-6">
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Relatórios</h3>
+                <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </TenantLayout>
+        } />
+        <Route path="/settings" element={
+          <TenantLayout title="Configurações" showBackButton={true}>
+            <div className="p-6">
+              <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Configurações</h3>
+                <p className="text-gray-600">Funcionalidade em desenvolvimento</p>
+              </div>
+            </div>
+          </TenantLayout>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </TenantProvider>

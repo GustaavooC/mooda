@@ -6,7 +6,6 @@ import AdminDashboard from './components/AdminDashboard';
 import TenantDashboard from './components/TenantDashboard';
 import ProductList from './components/ProductList';
 import StoreCustomization from './components/StoreCustomization';
-import ThemeSelector from './components/ThemeSelector';
 import TenantLayout from './components/TenantLayout';
 import PublicStoreFront from './components/PublicStoreFront';
 import AuthForm from './components/AuthForm';
@@ -53,7 +52,6 @@ const DashboardWrapper: React.FC = () => {
         <Route path="/" element={<TenantDashboard />} />
         <Route path="/products" element={<ProductList />} />
         <Route path="/customization" element={<StoreCustomization />} />
-        <Route path="/themes" element={<ThemeSelector />} />
         <Route path="/categories" element={
           <TenantLayout title="Categorias" showBackButton={true}>
             <div className="p-6">

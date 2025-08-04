@@ -74,12 +74,6 @@ const TenantLayout: React.FC<TenantLayoutProps> = ({
       current: location.pathname === '/dashboard/customization'
     },
     {
-      name: 'Temas',
-      href: '/dashboard/themes',
-      icon: Palette,
-      current: location.pathname === '/dashboard/themes'
-    },
-    {
       name: 'Relatórios',
       href: '/dashboard/reports',
       icon: BarChart3,

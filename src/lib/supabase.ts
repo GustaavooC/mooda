@@ -606,32 +606,6 @@ export type Database = {
           created_at?: string
         }
       }
-      store_themes: {
-        Row: {
-          id: string
-          tenant_id: string
-          theme_id: string
-          applied_at: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          tenant_id: string
-          theme_id: string
-          applied_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          tenant_id?: string
-          theme_id?: string
-          applied_at?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
     }
   }
 }

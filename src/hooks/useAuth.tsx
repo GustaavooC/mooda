@@ -177,15 +177,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to load and merge all credentials
+  const loadAllCredentials = () => {
+    try {
+      const storedCredentials = localStorage.getItem('demo_credentials');
+      if (storedCredentials) {
+        const dynamicCredentials = JSON.parse(storedCredentials);
+        console.log('Loading dynamic credentials:', Object.keys(dynamicCredentials));
+        return { ...DEMO_CREDENTIALS, ...dynamicCredentials };
+      }
+    } catch (error) {
+      console.warn('Error loading dynamic credentials:', error);
+    }
+    return DEMO_CREDENTIALS;
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign in for:', email);
       
-      // Load dynamic credentials first
-      loadDynamicCredentials();
+      // Load all credentials (static + dynamic)
+      const allCredentials = loadAllCredentials();
+      console.log('Available credentials:', Object.keys(allCredentials));
       
       // Check demo credentials first
-      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
+      const demoCredential = allCredentials[email as keyof typeof allCredentials];
+      console.log('Found credential for', email, ':', !!demoCredential);
+      
       if (demoCredential && demoCredential.password === password) {
         console.log('Demo login successful for:', email);
         setUser(demoCredential.user);
@@ -313,8 +331,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Load dynamic credentials
-        loadDynamicCredentials();
+        // Load all credentials at startup
+        const allCredentials = loadAllCredentials();
+        console.log('Initialized with credentials:', Object.keys(allCredentials));
         
         // Check for demo user in localStorage first
         const demoUser = localStorage.getItem('demo_user');

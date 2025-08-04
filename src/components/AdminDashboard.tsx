@@ -553,6 +553,11 @@ const AdminDashboard: React.FC = () => {
                     <p className="text-xs text-green-600 mt-2">
                       ✅ As credenciais foram configuradas automaticamente no sistema
                     </p>
+                    <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-xs text-blue-700">
+                        <strong>🔄 Para testar:</strong> Abra uma nova aba e faça login com essas credenciais
+                      </p>
+                    </div>
                   </div>
                   <p className="text-sm text-blue-600 mt-4 text-center">
                     🎉 O lojista já pode fazer login com essas credenciais!

@@ -40,6 +40,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
     setError(null);
 
     try {
+      console.log('Attempting login with:', formData.email);
+      
       if (mode === 'signup') {
         if (formData.password !== formData.confirmPassword) {
           throw new Error('As senhas não coincidem');
@@ -54,6 +56,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
         if (error) throw error;
       } else {
         const { error } = await signIn(formData.email, formData.password);
+        console.log('Login result:', { error });
         if (error) throw error;
       }
 

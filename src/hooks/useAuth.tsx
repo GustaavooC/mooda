@@ -28,7 +28,7 @@ interface AuthProviderProps {
 }
 
 // Demo credentials mapping
-const DEMO_CREDENTIALS = {
+let DEMO_CREDENTIALS = {
   'admin@mooda.com': {
     password: 'admin123',
     user: {
@@ -160,6 +160,19 @@ const DEMO_CREDENTIALS = {
     }
   }
 };
+// Function to load dynamic credentials
+const loadDynamicCredentials = () => {
+  try {
+    const storedCredentials = localStorage.getItem('demo_credentials');
+    if (storedCredentials) {
+      const dynamicCredentials = JSON.parse(storedCredentials);
+      DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...dynamicCredentials };
+    }
+  } catch (error) {
+    console.warn('Error loading dynamic credentials:', error);
+  }
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -167,6 +180,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign in for:', email);
+      
+      // Load dynamic credentials first
+      loadDynamicCredentials();
       
       // Check demo credentials first
       const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
@@ -297,6 +313,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Load dynamic credentials
+        loadDynamicCredentials();
+        
         // Check for demo user in localStorage first
         const demoUser = localStorage.getItem('demo_user');
         if (demoUser) {

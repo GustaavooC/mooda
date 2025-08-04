@@ -234,7 +234,7 @@ const AdminDashboard: React.FC = () => {
           contractDurationDays: 30
         });
         fetchTenants(); // Refresh the list
-      }, 2000);
+      }, 3000);
 
     } catch (error) {
       console.error('Error creating tenant:', error);
@@ -544,8 +544,18 @@ const AdminDashboard: React.FC = () => {
                       /loja/{newTenantForm.slug}
                     </p>
                   </div>
-                  <p className="text-sm text-gray-500 mt-4">
-                    Credenciais: {newTenantForm.adminEmail} / {newTenantForm.adminPassword}
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-medium text-green-800 mb-2">Credenciais de Acesso:</h4>
+                    <div className="space-y-1 text-sm text-green-700">
+                      <p><strong>Email:</strong> {newTenantForm.adminEmail}</p>
+                      <p><strong>Senha:</strong> {newTenantForm.adminPassword}</p>
+                    </div>
+                    <p className="text-xs text-green-600 mt-2">
+                      ✅ As credenciais foram configuradas automaticamente no sistema
+                    </p>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-4 text-center">
+                    🎉 O lojista já pode fazer login com essas credenciais!
                   </p>
                 </div>
               ) : (

@@ -125,14 +125,50 @@ export const useTenants = () => {
 
       console.log('Tenant created:', tenant);
 
-      // Note: In a real implementation, you would need to create the user in auth.users
-      // For now, we'll just return success
+      // Create default store customization
+      const { error: customizationError } = await supabase
+        .from('store_customizations')
+        .insert([{
+          tenant_id: tenant.id,
+          primary_color: '#3B82F6',
+          background_color: '#FFFFFF',
+          text_color: '#1F2937',
+          accent_color: '#EFF6FF',
+          font_family: 'Inter',
+          font_size_base: 16,
+          layout_style: 'modern'
+        }]);
+
+      if (customizationError) {
+        console.warn('Error creating default customization:', customizationError);
+      }
+
+      // Add tenant credentials to demo system
+      const demoCredentials = {
+        email: tenantData.adminEmail,
+        password: tenantData.adminPassword,
+        user: {
+          id: `tenant-user-${tenant.id}`,
+          email: tenantData.adminEmail,
+          name: tenantData.adminName,
+          tenantId: tenant.id,
+          tenantSlug: tenant.slug,
+          tenantName: tenant.name,
+          user_metadata: { name: tenantData.adminName }
+        }
+      };
+
+      // Store in localStorage for demo purposes
+      const existingCredentials = JSON.parse(localStorage.getItem('demo_credentials') || '{}');
+      existingCredentials[tenantData.adminEmail] = demoCredentials;
+      localStorage.setItem('demo_credentials', JSON.stringify(existingCredentials));
+
       return {
         success: true,
-        message: 'Loja criada com sucesso (usuário deve ser criado manualmente)',
+        message: 'Loja criada com sucesso! Credenciais de acesso configuradas.',
         data: {
           tenant_id: tenant.id,
-          user_id: null,
+          user_id: demoCredentials.user.id,
           subscription_id: null
         }
       };

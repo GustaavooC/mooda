@@ -34,8 +34,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Demo credentials mapping
-let DEMO_CREDENTIALS = {};
+
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -244,19 +243,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Load all credentials at startup
-        const allCredentials = loadAllCredentials();
-        console.log('Initialized with credentials:', Object.keys(allCredentials));
-        
         // Check for demo user in localStorage first
         const demoUser = localStorage.getItem('demo_user');
+
         if (demoUser) {
+          // Only load demo credentials if we actually have a demo user key
+          const allCredentials = loadAllCredentials();
+          console.log('Initialized with credentials:', Object.keys(allCredentials));
+
           const userData = JSON.parse(demoUser);
           console.log('Restored demo user from localStorage:', userData.email);
           setUser(userData);
           setLoading(false);
           return;
         }
+
+        console.log('Usuário normal detectado. Nenhum login automático será feito.');
         
         // Get initial session from Supabase
         const { data: { session } } = await supabase.auth.getSession();

@@ -34,8 +34,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Demo credentials mapping
-const DEMO_CREDENTIALS = {};
+
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

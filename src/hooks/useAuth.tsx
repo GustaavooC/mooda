@@ -10,14 +10,21 @@ export interface User {
   tenantId?: string;
   tenantSlug?: string;
   tenantName?: string;
-  user_metadata?: any;
+  user_metadata?: Record<string, unknown>;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ data: unknown; error: unknown }>;
+  signUp: (
+    email: string,
+    password: string,
+    metadata?: { name?: string; store_name?: string; store_slug?: string }
+  ) => Promise<{ data: unknown; error: unknown }>;
   signOut: () => Promise<void>;
 }
 
@@ -29,19 +36,6 @@ interface AuthProviderProps {
 
 // Demo credentials mapping
 let DEMO_CREDENTIALS = {};
-
-// Function to load dynamic credentials
-const loadDynamicCredentials = () => {
-  try {
-    const storedCredentials = localStorage.getItem('demo_credentials');
-    if (storedCredentials) {
-      const dynamicCredentials = JSON.parse(storedCredentials);
-      DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...dynamicCredentials };
-    }
-  } catch (error) {
-    console.warn('Error loading dynamic credentials:', error);
-  }
-};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -62,7 +56,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return DEMO_CREDENTIALS;
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ data: unknown; error: unknown }> => {
     try {
       console.log('Attempting sign in for:', email);
       
@@ -162,26 +159,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, name?: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+  const signUp = async (
+    email: string,
+    password: string,
+    metadata: { name?: string; store_name?: string; store_slug?: string } = {}
+  ): Promise<{ data: unknown; error: unknown }> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name: metadata.name }
+        }
+      });
 
-    if (error) return { data: null, error };
+      if (error) return { data: null, error };
 
-    if (data.user) {
-      // Create user profile
-      await supabase
-        .from('users')
-        .insert({
+      if (data.user) {
+        // Create user profile
+        await supabase.from('users').insert({
           id: data.user.id,
           email: data.user.email!,
-          name,
+          name: metadata.name || data.user.email!.split('@')[0]
         });
+
+        // Create tenant and link user if store info provided
+        if (metadata.store_name && metadata.store_slug) {
+          const { data: tenant, error: tenantError } = await supabase
+            .from('tenants')
+            .insert({
+              name: metadata.store_name,
+              slug: metadata.store_slug,
+              status: 'active',
+              owner_id: data.user.id,
+              settings: {}
+            })
+            .select()
+            .single();
+
+          if (!tenantError && tenant) {
+            await supabase.from('tenant_users').insert({
+              tenant_id: tenant.id,
+              user_id: data.user.id,
+              role: 'owner',
+              is_active: true
+            });
+
+            // Create default store customization
+            await supabase.from('store_customizations').insert({
+              tenant_id: tenant.id,
+              primary_color: '#3B82F6',
+              background_color: '#FFFFFF',
+              text_color: '#1F2937',
+              accent_color: '#EFF6FF',
+              font_family: 'Inter',
+              font_size_base: 16,
+              layout_style: 'modern'
+            });
+          }
+        }
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Sign up error:', error);
+      return { data: null, error };
     }
-    
-    return { data, error: null };
   };
 
   const signOut = async () => {

@@ -10,21 +10,14 @@ export interface User {
   tenantId?: string;
   tenantSlug?: string;
   tenantName?: string;
-  user_metadata?: Record<string, unknown>;
+  user_metadata?: any;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ data: unknown; error: unknown }>;
-  signUp: (
-    email: string,
-    password: string,
-    metadata?: { name?: string; store_name?: string; store_slug?: string }
-  ) => Promise<{ data: unknown; error: unknown }>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -34,42 +27,165 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-
+// Demo credentials mapping
+let DEMO_CREDENTIALS = {
+  'admin@mooda.com': {
+    password: 'admin123',
+    user: {
+      id: 'admin-user-id',
+      email: 'admin@mooda.com',
+      name: 'Administrador do Sistema',
+      isAdmin: true,
+      user_metadata: { name: 'Administrador do Sistema' }
+    }
+  },
+  'loja@moda-bella.com': {
+    password: 'loja123',
+    user: {
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      email: 'loja@moda-bella.com',
+      name: 'Maria Silva - Moda Bella',
+      tenantId: '11111111-1111-1111-1111-111111111111',
+      tenantSlug: 'moda-bella',
+      tenantName: 'Moda Bella',
+      user_metadata: { name: 'Maria Silva - Moda Bella' }
+    }
+  },
+  'admin@tech-store-pro.com': {
+    password: 'loja123',
+    user: {
+      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      email: 'admin@tech-store-pro.com',
+      name: 'João Tech - Tech Store Pro',
+      tenantId: '22222222-2222-2222-2222-222222222222',
+      tenantSlug: 'tech-store-pro',
+      tenantName: 'Tech Store Pro',
+      user_metadata: { name: 'João Tech - Tech Store Pro' }
+    }
+  },
+  'gerente@casa-decoracao.com': {
+    password: 'loja123',
+    user: {
+      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      email: 'gerente@casa-decoracao.com',
+      name: 'Ana Decoração - Casa & Decoração',
+      tenantId: '33333333-3333-3333-3333-333333333333',
+      tenantSlug: 'casa-decoracao',
+      tenantName: 'Casa & Decoração',
+      user_metadata: { name: 'Ana Decoração - Casa & Decoração' }
+    }
+  },
+  'dono@esporte-total.com': {
+    password: 'loja123',
+    user: {
+      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+      email: 'dono@esporte-total.com',
+      name: 'Carlos Esporte - Esporte Total',
+      tenantId: '44444444-4444-4444-4444-444444444444',
+      tenantSlug: 'esporte-total',
+      tenantName: 'Esporte Total',
+      user_metadata: { name: 'Carlos Esporte - Esporte Total' }
+    }
+  },
+  'admin@beleza-natural.com': {
+    password: 'loja123',
+    user: {
+      id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      email: 'admin@beleza-natural.com',
+      name: 'Fernanda Beleza - Beleza Natural',
+      tenantId: '55555555-5555-5555-5555-555555555555',
+      tenantSlug: 'beleza-natural',
+      tenantName: 'Beleza Natural',
+      user_metadata: { name: 'Fernanda Beleza - Beleza Natural' }
+    }
+  },
+  'livreiro@livraria-saber.com': {
+    password: 'loja123',
+    user: {
+      id: '10101010-1010-1010-1010-101010101010',
+      email: 'livreiro@livraria-saber.com',
+      name: 'Pedro Livros - Livraria Saber',
+      tenantId: '66666666-6666-6666-6666-666666666666',
+      tenantSlug: 'livraria-saber',
+      tenantName: 'Livraria Saber',
+      user_metadata: { name: 'Pedro Livros - Livraria Saber' }
+    }
+  },
+  'veterinario@pet-shop-amigo.com': {
+    password: 'loja123',
+    user: {
+      id: '20202020-2020-2020-2020-202020202020',
+      email: 'veterinario@pet-shop-amigo.com',
+      name: 'Juliana Pet - Pet Shop Amigo',
+      tenantId: '77777777-7777-7777-7777-777777777777',
+      tenantSlug: 'pet-shop-amigo',
+      tenantName: 'Pet Shop Amigo',
+      user_metadata: { name: 'Juliana Pet - Pet Shop Amigo' }
+    }
+  },
+  'chef@gourmet-express.com': {
+    password: 'loja123',
+    user: {
+      id: '30303030-3030-3030-3030-303030303030',
+      email: 'chef@gourmet-express.com',
+      name: 'Ricardo Gourmet - Gourmet Express',
+      tenantId: '88888888-8888-8888-8888-888888888888',
+      tenantSlug: 'gourmet-express',
+      tenantName: 'Gourmet Express',
+      user_metadata: { name: 'Ricardo Gourmet - Gourmet Express' }
+    }
+  },
+  'jardineiro@jardim-verde.com': {
+    password: 'loja123',
+    user: {
+      id: '40404040-4040-4040-4040-404040404040',
+      email: 'jardineiro@jardim-verde.com',
+      name: 'Camila Verde - Jardim Verde',
+      tenantId: '99999999-9999-9999-9999-999999999999',
+      tenantSlug: 'jardim-verde',
+      tenantName: 'Jardim Verde',
+      user_metadata: { name: 'Camila Verde - Jardim Verde' }
+    }
+  },
+  'artista@arte-craft.com': {
+    password: 'loja123',
+    user: {
+      id: '50505050-5050-5050-5050-505050505050',
+      email: 'artista@arte-craft.com',
+      name: 'Lucas Arte - Arte & Craft',
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      tenantSlug: 'arte-craft',
+      tenantName: 'Arte & Craft',
+      user_metadata: { name: 'Lucas Arte - Arte & Craft' }
+    }
+  }
+};
+// Function to load dynamic credentials
+const loadDynamicCredentials = () => {
+  try {
+    const storedCredentials = localStorage.getItem('demo_credentials');
+    if (storedCredentials) {
+      const dynamicCredentials = JSON.parse(storedCredentials);
+      DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...dynamicCredentials };
+    }
+  } catch (error) {
+    console.warn('Error loading dynamic credentials:', error);
+  }
+};
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Function to load and merge all credentials
-  const loadAllCredentials = () => {
-    try {
-      const storedCredentials = localStorage.getItem('demo_credentials');
-      if (storedCredentials) {
-        const dynamicCredentials = JSON.parse(storedCredentials);
-        console.log('Loading dynamic credentials:', Object.keys(dynamicCredentials));
-        return { ...DEMO_CREDENTIALS, ...dynamicCredentials };
-      }
-    } catch (error) {
-      console.warn('Error loading dynamic credentials:', error);
-    }
-    return DEMO_CREDENTIALS;
-  };
-
-  const signIn = async (
-    email: string,
-    password: string
-  ): Promise<{ data: unknown; error: unknown }> => {
+  const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign in for:', email);
       
-      // Load all credentials (static + dynamic)
-      const allCredentials = loadAllCredentials();
-      console.log('Available credentials:', Object.keys(allCredentials));
+      // Load dynamic credentials first
+      loadDynamicCredentials();
       
       // Check demo credentials first
-      const demoCredential = allCredentials[email as keyof typeof allCredentials];
-      console.log('Found credential for', email, ':', !!demoCredential);
-      
+      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
       if (demoCredential && demoCredential.password === password) {
         console.log('Demo login successful for:', email);
         setUser(demoCredential.user);
@@ -158,72 +274,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    metadata: { name?: string; store_name?: string; store_slug?: string } = {}
-  ): Promise<{ data: unknown; error: unknown }> => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name: metadata.name }
-        }
-      });
+  const signUp = async (email: string, password: string, name?: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-      if (error) return { data: null, error };
+    if (error) return { data: null, error };
 
-      if (data.user) {
-        // Create user profile
-        await supabase.from('users').insert({
+    if (data.user) {
+      // Create user profile
+      await supabase
+        .from('users')
+        .insert({
           id: data.user.id,
           email: data.user.email!,
-          name: metadata.name || data.user.email!.split('@')[0]
+          name,
         });
-
-        // Create tenant and link user if store info provided
-        if (metadata.store_name && metadata.store_slug) {
-          const { data: tenant, error: tenantError } = await supabase
-            .from('tenants')
-            .insert({
-              name: metadata.store_name,
-              slug: metadata.store_slug,
-              status: 'active',
-              owner_id: data.user.id,
-              settings: {}
-            })
-            .select()
-            .single();
-
-          if (!tenantError && tenant) {
-            await supabase.from('tenant_users').insert({
-              tenant_id: tenant.id,
-              user_id: data.user.id,
-              role: 'owner',
-              is_active: true
-            });
-
-            // Create default store customization
-            await supabase.from('store_customizations').insert({
-              tenant_id: tenant.id,
-              primary_color: '#3B82F6',
-              background_color: '#FFFFFF',
-              text_color: '#1F2937',
-              accent_color: '#EFF6FF',
-              font_family: 'Inter',
-              font_size_base: 16,
-              layout_style: 'modern'
-            });
-          }
-        }
-      }
-
-      return { data, error: null };
-    } catch (error) {
-      console.error('Sign up error:', error);
-      return { data: null, error };
     }
+    
+    return { data, error: null };
   };
 
   const signOut = async () => {
@@ -243,22 +313,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Load dynamic credentials
+        loadDynamicCredentials();
+        
         // Check for demo user in localStorage first
         const demoUser = localStorage.getItem('demo_user');
-
         if (demoUser) {
-          // Only load demo credentials if we actually have a demo user key
-          const allCredentials = loadAllCredentials();
-          console.log('Initialized with credentials:', Object.keys(allCredentials));
-
           const userData = JSON.parse(demoUser);
           console.log('Restored demo user from localStorage:', userData.email);
           setUser(userData);
           setLoading(false);
           return;
         }
-
-        console.log('Usuário normal detectado. Nenhum login automático será feito.');
         
         // Get initial session from Supabase
         const { data: { session } } = await supabase.auth.getSession();

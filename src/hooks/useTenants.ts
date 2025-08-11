@@ -162,9 +162,6 @@ export const useTenants = () => {
       const existingCredentials = JSON.parse(localStorage.getItem('demo_credentials') || '{}');
       existingCredentials[tenantData.adminEmail] = demoCredentials;
       localStorage.setItem('demo_credentials', JSON.stringify(existingCredentials));
-      
-      console.log('Stored credentials for:', tenantData.adminEmail);
-      console.log('All stored credentials:', Object.keys(existingCredentials));
 
       return {
         success: true,

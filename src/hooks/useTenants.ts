@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import axios from 'axios';
 
 export interface Tenant {
   id: string;
@@ -62,7 +63,7 @@ export const useTenants = () => {
     try {
       console.log('Creating tenant with data:', tenantData);
 
-      // First check if function exists and call it
+      // Tentar criar via função RPC primeiro
       const { data: functionResult, error: functionError } = await supabase.rpc('create_tenant_with_user', {
         p_tenant_name: tenantData.name,
         p_tenant_slug: tenantData.slug,
@@ -73,12 +74,9 @@ export const useTenants = () => {
         p_admin_password: tenantData.adminPassword
       });
 
-      console.log('Create tenant function result:', { functionResult, functionError });
-
       if (functionError) {
         console.error('Function error:', functionError);
         
-        // If function doesn't exist, create manually
         if (functionError.code === '42883') {
           console.log('Function not found, creating tenant manually...');
           return await createTenantManually(tenantData);
@@ -93,6 +91,7 @@ export const useTenants = () => {
       }
 
       console.log('Tenant created successfully:', functionResult);
+      await fetchTenants(); // Atualizar lista de tenants
       return functionResult;
     } catch (err) {
       console.error('Error creating tenant:', err);
@@ -104,7 +103,7 @@ export const useTenants = () => {
     try {
       console.log('Creating tenant manually...');
       
-      // Create tenant
+      // 1. Criar o tenant
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
         .insert([{
@@ -125,58 +124,59 @@ export const useTenants = () => {
 
       console.log('Tenant created:', tenant);
 
-      // Create default store customization
-      const { error: customizationError } = await supabase
-        .from('store_customizations')
-        .insert([{
-          tenant_id: tenant.id,
-          primary_color: '#3B82F6',
-          background_color: '#FFFFFF',
-          text_color: '#1F2937',
-          accent_color: '#EFF6FF',
-          font_family: 'Inter',
-          font_size_base: 16,
-          layout_style: 'modern'
-        }]);
-
-      if (customizationError) {
-        console.warn('Error creating default customization:', customizationError);
-      }
-
-      // Add tenant credentials to demo system
-      const demoCredentials = {
-        email: tenantData.adminEmail,
-        password: tenantData.adminPassword,
-        user: {
-          id: `tenant-user-${tenant.id}`,
+      // 2. Criar usuário admin via API
+      try {
+        const response = await axios.post('/api/createTenantUser', {
           email: tenantData.adminEmail,
+          password: tenantData.adminPassword,
           name: tenantData.adminName,
-          tenantId: tenant.id,
-          tenantSlug: tenant.slug,
-          tenantName: tenant.name,
-          user_metadata: { name: tenantData.adminName }
-        }
-      };
+          tenantId: tenant.id
+        });
 
-      // Store in localStorage for demo purposes
-      const existingCredentials = JSON.parse(localStorage.getItem('demo_credentials') || '{}');
-      existingCredentials[tenantData.adminEmail] = demoCredentials;
-      localStorage.setItem('demo_credentials', JSON.stringify(existingCredentials));
-
-      return {
-        success: true,
-        message: 'Loja criada com sucesso! Credenciais de acesso configuradas.',
-        data: {
-          tenant_id: tenant.id,
-          user_id: demoCredentials.user.id,
-          subscription_id: null
+        if (response.data.error) {
+          throw new Error(response.data.error);
         }
-      };
+
+        // 3. Criar customização da loja
+        const { error: customizationError } = await supabase
+          .from('store_customizations')
+          .insert([{
+            tenant_id: tenant.id,
+            primary_color: '#3B82F6',
+            background_color: '#FFFFFF',
+            text_color: '#1F2937',
+            accent_color: '#EFF6FF',
+            font_family: 'Inter',
+            font_size_base: 16,
+            layout_style: 'modern'
+          }]);
+
+        if (customizationError) {
+          console.warn('Error creating customization:', customizationError);
+        }
+
+        await fetchTenants(); // Atualizar lista de tenants
+
+        return {
+          success: true,
+          message: 'Loja criada com sucesso! Credenciais de acesso configuradas.',
+          data: {
+            tenant_id: tenant.id,
+            user_id: response.data.user.id,
+            subscription_id: null
+          }
+        };
+      } catch (error) {
+        // Se falhar na criação do usuário, deletar o tenant
+        await supabase.from('tenants').delete().eq('id', tenant.id);
+        throw error;
+      }
     } catch (error) {
       console.error('Error in manual tenant creation:', error);
       throw error;
     }
   };
+
   const updateTenant = async (id: string, updates: Partial<Tenant>) => {
     try {
       const { data, error } = await supabase

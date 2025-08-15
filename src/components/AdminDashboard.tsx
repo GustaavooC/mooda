@@ -53,7 +53,7 @@ const AdminDashboard: React.FC = () => {
     description: '',
     adminEmail: '',
     adminName: '',
-    adminPassword: 'loja123',
+    adminPassword: '',
     contractDurationDays: 30
   });
 

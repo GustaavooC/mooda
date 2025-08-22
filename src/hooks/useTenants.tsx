@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, supabaseAdmin } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { addDynamicCredential } from './useAuth';
 
 // Define the Tenant interface based on your database schema
@@ -65,7 +65,7 @@ export const useTenants = () => {
       console.log('Creating tenant with data:', tenantData);
       
       // Use admin client for tenant creation
-      const client = supabaseAdmin || supabase;
+      const client = supabase;
       
       // First, create the tenant
       const { data: tenantResult, error: tenantError } = await client

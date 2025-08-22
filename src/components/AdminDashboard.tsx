@@ -650,18 +650,21 @@ const AdminDashboard: React.FC = () => {
                     </p>
                   </div>
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-medium text-blue-800 mb-2">Próximos Passos:</h4>
+                    <h4 className="font-medium text-blue-800 mb-2">✅ Loja Criada com Sucesso!</h4>
                     <div className="space-y-2 text-sm text-blue-700">
-                      <p>1. Envie este link para o administrador da loja:</p>
-                      <div className="bg-white p-2 rounded border font-mono text-xs break-all">
-                        {window.location.origin}/auth/signup?tenant={newTenantForm.slug}&email={encodeURIComponent(newTenantForm.adminEmail)}
+                      <p><strong>📧 Email:</strong> {newTenantForm.adminEmail}</p>
+                      <p><strong>🔑 Senha:</strong> {newTenantForm.adminPassword}</p>
+                      <p><strong>🏪 URL da Loja:</strong> /loja/{newTenantForm.slug}</p>
+                      <div className="mt-3 p-2 bg-white rounded border">
+                        <p className="font-medium text-blue-800 mb-1">Como testar:</p>
+                        <p className="text-xs">1. Vá para /auth/signin</p>
+                        <p className="text-xs">2. Use as credenciais acima</p>
+                        <p className="text-xs">3. Acesse o dashboard da loja</p>
                       </div>
-                      <p>2. O administrador deve criar sua conta usando este link</p>
-                      <p>3. Após o registro, ele terá acesso total à loja</p>
                     </div>
                     <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
                       <p className="text-xs text-green-700 font-medium">
-                        ✅ Loja criada e aguardando registro do administrador
+                        ✅ Credenciais demo ativas - Login disponível imediatamente!
                       </p>
                     </div>
                   </div>

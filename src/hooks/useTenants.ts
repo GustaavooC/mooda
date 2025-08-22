@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { addDynamicCredential } from './useAuth';
-import { createClient } from '@supabase/supabase-js';
+import { createAdminClient } from '../lib/supabase';
 
 export interface Tenant {
   id: string;
@@ -33,29 +33,6 @@ interface CreateTenantData {
   adminPassword: string;
   contractDurationDays?: number;
 }
-
-// Create admin client with service role key
-const createAdminClient = () => {
-  // Try to get service role key from environment
-  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (serviceRoleKey && serviceRoleKey !== import.meta.env.VITE_SUPABASE_ANON_KEY) {
-    console.log('Using service role key for admin operations');
-    return createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      serviceRoleKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-  }
-  
-  console.log('Service role key not available, using regular client');
-  return supabase;
-};
 
 export const useTenants = () => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -99,8 +76,11 @@ export const useTenants = () => {
     try {
       console.log('Creating tenant for self-registration...');
       
+      // Use admin client to bypass RLS
+      const adminClient = createAdminClient();
+      
       // 1. Create tenant without owner_id (will be set when user registers)
-      const { data: tenant, error: tenantError } = await supabase
+      const { data: tenant, error: tenantError } = await adminClient
         .from('tenants')
         .insert([{
           name: tenantData.name,
@@ -122,7 +102,7 @@ export const useTenants = () => {
       console.log('Tenant created:', tenant);
 
       // 2. Create store customization
-      const { error: customizationError } = await supabase
+      const { error: customizationError } = await adminClient
         .from('store_customizations')
         .insert([{
           tenant_id: tenant.id,
@@ -139,16 +119,32 @@ export const useTenants = () => {
         console.warn('Error creating customization:', customizationError);
       }
 
+      // 3. Add to demo credentials system for immediate testing
+      const demoUserId = `demo-user-${tenant.slug}`;
+      const demoUserData = {
+        id: demoUserId,
+        email: tenantData.adminEmail,
+        name: tenantData.adminName,
+        tenantId: tenant.id,
+        tenantSlug: tenant.slug,
+        tenantName: tenant.name,
+        user_metadata: { name: tenantData.adminName }
+      };
+
+      // Add to dynamic credentials
+      addDynamicCredential(tenantData.adminEmail, tenantData.adminPassword, demoUserData);
+
       await fetchTenants();
 
       return {
         success: true,
-        message: `Loja "${tenantData.name}" criada com sucesso! O administrador deve criar sua conta em: /auth/signup?tenant=${tenant.slug}`,
+        message: `Loja "${tenantData.name}" criada com sucesso! Credenciais demo adicionadas automaticamente.`,
         data: {
           tenant_id: tenant.id,
           tenant_slug: tenant.slug,
-          registration_url: `/auth/signup?tenant=${tenant.slug}`,
-          admin_email: tenantData.adminEmail
+          admin_email: tenantData.adminEmail,
+          admin_password: tenantData.adminPassword,
+          demo_login_ready: true
         }
       };
     } catch (error) {

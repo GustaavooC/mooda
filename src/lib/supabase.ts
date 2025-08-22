@@ -18,9 +18,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Create admin client for admin operations
 export const createAdminClient = () => {
+  // Try to get service role key from environment
   const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
   
   if (serviceRoleKey && serviceRoleKey !== supabaseAnonKey) {
+    console.log('✅ Using service role key for admin operations');
     return createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -29,6 +31,7 @@ export const createAdminClient = () => {
     });
   }
   
+  console.log('⚠️ Service role key not available, using regular client');
   return supabase;
 };
 

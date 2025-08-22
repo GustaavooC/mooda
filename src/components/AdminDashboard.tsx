@@ -128,28 +128,6 @@ interface NewTenantForm {
   adminPassword: string;
   contractDurationDays: number;
 }
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700">
-          💡 Estas credenciais estão ativas e podem ser usadas para login imediatamente.
-        </p>
-      </div>
-    </div>
-  );
-};
-
-interface NewTenantForm {
-  name: string;
-  slug: string;
-  description: string;
-  adminEmail: string;
-  adminName: string;
-  adminPassword: string;
-  contractDurationDays: number;
-}
 
 const AdminDashboard: React.FC = () => {
   const { user, signOut } = useAuth();

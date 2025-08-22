@@ -322,7 +322,7 @@ const AdminDashboard: React.FC = () => {
       // Mostra mensagem de sucesso
       setCreateSuccess(true);
       
-      // Reseta o formulário após 3 segundos
+      // Show success message with registration link
       setTimeout(() => {
         setCreateSuccess(false);
         setShowCreateModal(false);
@@ -336,7 +336,7 @@ const AdminDashboard: React.FC = () => {
           contractDurationDays: 30
         });
         fetchTenants(); // Atualiza a lista de tenants
-      }, 3000);
+      }, 5000);
 
     } catch (error) {
       console.error('Error creating tenant:', error);
@@ -649,18 +649,19 @@ const AdminDashboard: React.FC = () => {
                       /loja/{newTenantForm.slug}
                     </p>
                   </div>
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h4 className="font-medium text-green-800 mb-2">Credenciais de Acesso:</h4>
-                    <div className="space-y-1 text-sm text-green-700">
-                      <p><strong>Email:</strong> {newTenantForm.adminEmail}</p>
-                      <p><strong>Senha:</strong> {newTenantForm.adminPassword}</p>
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-800 mb-2">Próximos Passos:</h4>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <p>1. Envie este link para o administrador da loja:</p>
+                      <div className="bg-white p-2 rounded border font-mono text-xs break-all">
+                        {window.location.origin}/auth/signup?tenant={newTenantForm.slug}&email={encodeURIComponent(newTenantForm.adminEmail)}
+                      </div>
+                      <p>2. O administrador deve criar sua conta usando este link</p>
+                      <p>3. Após o registro, ele terá acesso total à loja</p>
                     </div>
-                    <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
-                      <p className="text-xs text-blue-700 font-medium">
-                        ✅ Credenciais configuradas! O lojista pode fazer login imediatamente.
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1">
-                        URL de acesso: <span className="font-mono">/auth/signin</span>
+                    <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                      <p className="text-xs text-green-700 font-medium">
+                        ✅ Loja criada e aguardando registro do administrador
                       </p>
                     </div>
                   </div>

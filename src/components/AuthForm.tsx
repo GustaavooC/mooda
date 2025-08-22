@@ -17,12 +17,41 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
     password: searchParams.get('password') || '',
     confirmPassword: '',
     name: '',
-    storeName: '',
-    storeSlug: '',
+    tenantSlug: searchParams.get('tenant') || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [availableTenant, setAvailableTenant] = useState<any>(null);
+
+  // Check if there's a tenant waiting for registration
+  React.useEffect(() => {
+    const checkTenant = async () => {
+      const tenantSlug = searchParams.get('tenant');
+      if (tenantSlug && mode === 'signup') {
+        try {
+          const { data: tenant } = await supabase
+            .from('tenants')
+            .select('*')
+            .eq('slug', tenantSlug)
+            .is('owner_id', null)
+            .single();
+          
+          if (tenant) {
+            setAvailableTenant(tenant);
+            setFormData(prev => ({
+              ...prev,
+              tenantSlug: tenant.slug
+            }));
+          }
+        } catch (error) {
+          console.error('Error checking tenant:', error);
+        }
+      }
+    };
+    
+    checkTenant();
+  }, [searchParams, mode]);
 
   // Auto-fill and focus if URL params are present
   React.useEffect(() => {
@@ -51,15 +80,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value,
-      ...(name === 'storeName' && {
-        storeSlug: value.toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9]/g, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '')
-      })
+      [name]: value
     }));
   };
 
@@ -71,7 +92,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
     }
 
     if (mode === 'signup') {
-      if (!formData.name || !formData.storeName || !formData.storeSlug) {
+      if (!formData.name) {
         setError('Todos os campos são obrigatórios');
         return false;
       }
@@ -101,37 +122,81 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
 
     try {
       if (mode === 'signup') {
-        const { error } = await signUp(formData.email, formData.password, {
-          name: formData.name,
-          store_name: formData.storeName,
-          store_slug: formData.storeSlug,
+        // First, create the user account
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              name: formData.name
+            }
+          }
         });
 
-        if (error) {
-          switch (error.message) {
+        if (signUpError) {
+          switch (signUpError.message) {
             case 'User already registered':
               throw new Error('Este email já está registrado');
             case 'Password should be at least 6 characters':
               throw new Error('A senha deve ter pelo menos 6 caracteres');
             default:
-              throw error;
+              throw signUpError;
           }
         }
-        setSuccess(true);
-        setTimeout(() => {
-          navigate('/auth/signin');
-        }, 5000);
+
+        // If there's a tenant waiting, associate the user with it
+        if (availableTenant && authData.user) {
+          try {
+            // Create user profile
+            await supabase
+              .from('users')
+              .insert({
+                id: authData.user.id,
+                email: formData.email,
+                name: formData.name
+              });
+
+            // Update tenant with owner_id
+            await supabase
+              .from('tenants')
+              .update({ owner_id: authData.user.id })
+              .eq('id', availableTenant.id);
+
+            // Create tenant_users relationship
+            await supabase
+              .from('tenant_users')
+              .insert({
+                tenant_id: availableTenant.id,
+                user_id: authData.user.id,
+                role: 'owner',
+                is_active: true
+              });
+
+            setSuccess(true);
+            setTimeout(() => {
+              navigate('/auth/signin');
+            }, 3000);
+          } catch (tenantError) {
+            console.error('Error associating user with tenant:', tenantError);
+            setError('Conta criada, mas erro ao vincular à loja. Entre em contato com o suporte.');
+          }
+        } else {
+          setSuccess(true);
+          setTimeout(() => {
+            navigate('/auth/signin');
+          }, 3000);
+        }
 
       } else {
-        const { error } = await signIn(formData.email, formData.password);
-        if (error) {
-          switch (error.message) {
+        const result = await signIn(formData.email, formData.password);
+        if (result.error) {
+          switch (result.error.message) {
             case 'Invalid login credentials':
               throw new Error('Email ou senha inválidos');
             case 'Email not confirmed':
               throw new Error('Por favor, confirme seu email antes de fazer login');
             default:
-              throw error;
+              throw result.error;
           }
         }
         if (onSuccess) {
@@ -186,7 +251,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
   const getSubtitle = () => {
     switch (mode) {
       case 'signin': return 'Acesse o painel da sua loja';
-      case 'signup': return 'Comece a vender online hoje mesmo';
+      case 'signup': return availableTenant ? `Registre-se como administrador da loja "${availableTenant.name}"` : 'Crie sua conta';
       case 'admin': return 'Painel de administração do sistema';
       default: return '';
     }
@@ -210,12 +275,27 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
         {/* Mensagem de sucesso para signup */}
         {mode === 'signup' && success && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-green-800 mb-2">
-              Loja criada com sucesso! 🎉
-            </h3>
+            <h3 className="text-lg font-medium text-green-800 mb-2">Conta criada com sucesso! 🎉</h3>
             <p className="text-sm text-green-600">
-              Verifique seu email para confirmar sua conta. Você será redirecionado para a página de login em alguns segundos...
+              {availableTenant 
+                ? `Você agora é o administrador da loja "${availableTenant.name}". Redirecionando para o login...`
+                : 'Verifique seu email para confirmar sua conta. Redirecionando para o login...'
+              }
             </p>
+          </div>
+        )}
+
+        {/* Tenant Registration Info */}
+        {mode === 'signup' && availableTenant && !success && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-lg font-medium text-blue-800 mb-2">Registro de Administrador</h3>
+            <p className="text-sm text-blue-600 mb-2">
+              Você está se registrando como administrador da loja:
+            </p>
+            <div className="bg-white p-3 rounded border">
+              <p className="font-medium text-blue-900">{availableTenant.name}</p>
+              <p className="text-sm text-blue-700">/{availableTenant.slug}</p>
+            </div>
           </div>
         )}
 
@@ -276,46 +356,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
                       onChange={handleInputChange}
                       className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Seu nome completo"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="storeName" className="block text-sm font-medium text-gray-700 mb-2">
-                    Nome da loja
-                  </label>
-                  <div className="relative">
-                    <Store className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                    <input
-                      id="storeName"
-                      name="storeName"
-                      type="text"
-                      required
-                      value={formData.storeName}
-                      onChange={handleInputChange}
-                      className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Nome da sua loja"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="storeSlug" className="block text-sm font-medium text-gray-700 mb-2">
-                    URL da loja
-                  </label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                      mooda.com/
-                    </span>
-                    <input
-                      id="storeSlug"
-                      name="storeSlug"
-                      type="text"
-                      required
-                      value={formData.storeSlug}
-                      onChange={handleInputChange}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="minha-loja"
                     />
                   </div>
                 </div>

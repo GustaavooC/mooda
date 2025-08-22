@@ -670,16 +670,17 @@ const AdminDashboard: React.FC = () => {
                         <p className="text-xs text-green-800 font-medium">
                           🎉 Usuário criado no Supabase Auth - Sistema de produção ativo!
                         </p>
-                      <div className="mt-3 p-3 bg-white rounded border">
-                        <p className="font-medium text-green-800 mb-2">🚀 Pronto para Usar:</p>
-                        <div className="space-y-1 text-xs">
-                          <p>✅ Usuário criado no Supabase Auth</p>
-                          <p>✅ Perfil e permissões configurados</p>
-                          <p>✅ Loja vinculada automaticamente</p>
-                          <p>✅ Login disponível imediatamente</p>
+                        <div className="mt-3 p-3 bg-white rounded border">
+                          <p className="font-medium text-green-800 mb-2">🚀 Pronto para Usar:</p>
+                          <div className="space-y-1 text-xs">
+                            <p>✅ Usuário criado no Supabase Auth</p>
+                            <p>✅ Perfil e permissões configurados</p>
+                            <p>✅ Loja vinculada automaticamente</p>
+                            <p>✅ Login disponível imediatamente</p>
+                          </div>
                         </div>
                       </div>
-                      </div>
+                      <div className="mt-3 p-2 bg-white rounded border">
                         <p className="font-medium text-green-800 mb-1">Como Testar:</p>
                         <div className="space-y-1 text-xs">
                           <p>1. Vá para <code>/auth/signin</code></p>
@@ -687,25 +688,28 @@ const AdminDashboard: React.FC = () => {
                           <p>3. Senha: {newTenantForm.adminPassword}</p>
                           <p>4. Acesse o dashboard da loja</p>
                         </div>
+                      </div>
                       <div className="bg-white p-3 rounded border font-mono text-sm break-all">
                         {window.location.origin}{createResult.data.registration_url}
-                    <div className="mt-3 flex gap-2">
-                      <a
-                        href={`/auth/signin?email=${encodeURIComponent(newTenantForm.adminEmail)}&password=${encodeURIComponent(newTenantForm.adminPassword)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
-                      >
-                        🚀 Testar Login
-                      </a>
-                      <a
-                        href={`/loja/${newTenantForm.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
-                      >
-                        👁️ Ver Loja
-                      </a>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <a
+                          href={`/auth/signin?email=${encodeURIComponent(newTenantForm.adminEmail)}&password=${encodeURIComponent(newTenantForm.adminPassword)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                        >
+                          🚀 Testar Login
+                        </a>
+                        <a
+                          href={`/loja/${newTenantForm.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                        >
+                          👁️ Ver Loja
+                        </a>
+                      </div>
                     </div>
                   ) : null}
                 </div>

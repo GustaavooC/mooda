@@ -690,7 +690,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                       </div>
                       <div className="bg-white p-3 rounded border font-mono text-sm break-all">
-                        {window.location.origin}{createResult.data.registration_url}
+                        {window.location.origin}{createResult?.data?.registration_url}
                       </div>
                       <div className="mt-3 flex gap-2">
                         <a
@@ -711,7 +711,8 @@ const AdminDashboard: React.FC = () => {
                         </a>
                       </div>
                     </div>
-                  ) : null}
+                  ) : null
+                  }
                 </div>
               ) : (
                 <div className="space-y-6">

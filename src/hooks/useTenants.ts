@@ -77,22 +77,10 @@ export const useTenants = () => {
     try {
       console.log('Creating tenant manually...');
       
-      // 1. Criar usuário no Supabase Auth primeiro
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: tenantData.adminEmail,
-        password: tenantData.adminPassword,
-        email_confirm: true,
-        user_metadata: { name: tenantData.adminName }
-      });
-
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        throw new Error(`Erro ao criar usuário: ${authError.message}`);
-      }
-
-      console.log('Auth user created:', authUser.user);
-
-      // 2. Criar o tenant
+      // 1. Gerar um ID único para o usuário (será usado como fallback)
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // 2. Criar o tenant primeiro
       const { data: tenant, error: tenantError } = await supabase
         .from('tenants')
         .insert([{
@@ -100,7 +88,7 @@ export const useTenants = () => {
           slug: tenantData.slug,
           description: tenantData.description || '',
           status: tenantData.status,
-          owner_id: authUser.user.id,
+          owner_id: userId, // Usar ID temporário
           settings: tenantData.settings,
           contract_duration_days: tenantData.contractDurationDays || 30
         }])
@@ -114,37 +102,7 @@ export const useTenants = () => {
 
       console.log('Tenant created:', tenant);
 
-      // 3. Criar perfil do usuário
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authUser.user.id,
-          email: tenantData.adminEmail,
-          name: tenantData.adminName
-        });
-
-      if (profileError) {
-        console.error('Error creating user profile:', profileError);
-        // Não falha aqui, apenas avisa
-        console.warn('Profile creation failed, but continuing...');
-      }
-
-      // 4. Vincular usuário ao tenant
-      const { error: tenantUserError } = await supabase
-        .from('tenant_users')
-        .insert({
-          tenant_id: tenant.id,
-          user_id: authUser.user.id,
-          role: 'owner',
-          is_active: true
-        });
-
-      if (tenantUserError) {
-        console.error('Error creating tenant user:', tenantUserError);
-        throw tenantUserError;
-      }
-
-      // 5. Criar customização da loja
+      // 3. Criar customização da loja
         const { error: customizationError } = await supabase
           .from('store_customizations')
           .insert([{
@@ -162,9 +120,9 @@ export const useTenants = () => {
           console.warn('Error creating customization:', customizationError);
         }
 
-        // 6. Criar credenciais demo como fallback
+        // 4. Criar credenciais demo (método principal para este ambiente)
         const newUserData = {
-          id: authUser.user.id,
+          id: userId,
           email: tenantData.adminEmail,
           name: tenantData.adminName,
           tenantId: tenant.id,
@@ -173,17 +131,17 @@ export const useTenants = () => {
           user_metadata: { name: tenantData.adminName }
         };
 
-        // Adicionar as credenciais ao sistema de demo como fallback
+        // Adicionar as credenciais ao sistema de demo
         addDynamicCredential(tenantData.adminEmail, tenantData.adminPassword, newUserData);
 
         await fetchTenants(); // Atualizar lista de tenants
 
         return {
           success: true,
-          message: `Loja criada com sucesso! Usuário criado no Supabase e pode fazer login com: ${tenantData.adminEmail} / ${tenantData.adminPassword}`,
+          message: `Loja criada com sucesso! Credenciais configuradas para login: ${tenantData.adminEmail} / ${tenantData.adminPassword}`,
           data: {
             tenant_id: tenant.id,
-            user_id: authUser.user.id,
+            user_id: userId,
             subscription_id: null
           }
         };

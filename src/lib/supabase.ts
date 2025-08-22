@@ -16,24 +16,13 @@ try {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Create admin client for admin operations
-export const createAdminClient = () => {
-  // Try to get service role key from environment
-  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (serviceRoleKey && serviceRoleKey !== supabaseAnonKey) {
-    console.log('✅ Using service role key for admin operations');
-    return createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-  }
-  
-  console.log('⚠️ Service role key not available, using regular client');
-  return supabase;
-};
+// Validate service role key
+const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+if (serviceRoleKey && serviceRoleKey !== supabaseAnonKey) {
+  console.log('✅ Service role key configured for admin operations');
+} else {
+  console.warn('⚠️ Service role key not configured - admin operations may fail');
+}
 
 export type Database = {
   public: {

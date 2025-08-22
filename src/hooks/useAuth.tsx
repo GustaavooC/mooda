@@ -207,22 +207,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Attempting sign in for:', email);
       
-      // Load dynamic credentials first
-      loadDynamicCredentials();
-      
-      // Check if this is a demo credential first (more reliable for this environment)
-      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
-      if (demoCredential && demoCredential.password === password) {
-        console.log('✅ Demo login successful for:', email);
-        console.log('User data:', demoCredential.user);
-        setUser(demoCredential.user);
-        
-        // Store in localStorage for persistence
-        localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
-        
-        return { data: { user: demoCredential.user }, error: null };
-      }
-      
       // Try Supabase auth first
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -287,6 +271,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Final user data:', userData);
         setUser(userData);
         return { data, error: null };
+      }
+
+      // If Supabase auth failed, try demo credentials
+      loadDynamicCredentials();
+      
+      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
+      if (demoCredential && demoCredential.password === password) {
+        console.log('✅ Demo login successful for:', email);
+        console.log('User data:', demoCredential.user);
+        setUser(demoCredential.user);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
+        
+        return { data: { user: demoCredential.user }, error: null };
       }
 
       // If Supabase auth failed and no demo credential found

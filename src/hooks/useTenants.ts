@@ -1,323 +1,485 @@
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { addDynamicCredential } from './useAuth';
-import { createAdminClient } from '../lib/supabase';
 
-export interface Tenant {
+export interface User {
   id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  logo_url?: string;
-  domain?: string;
-  status: 'active' | 'inactive' | 'suspended' | 'trial';
-  owner_id?: string;
-  settings: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-  subscription?: {
-    plan: string;
-    status: string;
-    price_monthly: number;
-  };
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  isAdmin?: boolean;
+  tenantId?: string;
+  tenantSlug?: string;
+  tenantName?: string;
+  user_metadata?: any;
 }
 
-interface CreateTenantData {
-  name: string;
-  slug: string;
-  description?: string;
-  status: 'active' | 'inactive' | 'suspended' | 'trial';
-  settings: Record<string, any>;
-  adminEmail: string;
-  adminName: string;
-  adminPassword: string;
-  contractDurationDays?: number;
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
-export const useTenants = () => {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+// Demo credentials mapping
+let DEMO_CREDENTIALS = {
+  'admin@mooda.com': {
+    password: 'admin123',
+    user: {
+      id: 'admin-user-id',
+      email: 'admin@mooda.com',
+      name: 'Administrador do Sistema',
+      isAdmin: true,
+      user_metadata: { name: 'Administrador do Sistema' }
+    }
+  },
+  'loja@moda-bella.com': {
+    password: 'loja123',
+    user: {
+      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      email: 'loja@moda-bella.com',
+      name: 'Maria Silva - Moda Bella',
+      tenantId: '11111111-1111-1111-1111-111111111111',
+      tenantSlug: 'moda-bella',
+      tenantName: 'Moda Bella',
+      user_metadata: { name: 'Maria Silva - Moda Bella' }
+    }
+  },
+  'admin@tech-store-pro.com': {
+    password: 'loja123',
+    user: {
+      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+      email: 'admin@tech-store-pro.com',
+      name: 'João Tech - Tech Store Pro',
+      tenantId: '22222222-2222-2222-2222-222222222222',
+      tenantSlug: 'tech-store-pro',
+      tenantName: 'Tech Store Pro',
+      user_metadata: { name: 'João Tech - Tech Store Pro' }
+    }
+  },
+  'gerente@casa-decoracao.com': {
+    password: 'loja123',
+    user: {
+      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+      email: 'gerente@casa-decoracao.com',
+      name: 'Ana Decoração - Casa & Decoração',
+      tenantId: '33333333-3333-3333-3333-333333333333',
+      tenantSlug: 'casa-decoracao',
+      tenantName: 'Casa & Decoração',
+      user_metadata: { name: 'Ana Decoração - Casa & Decoração' }
+    }
+  },
+  'dono@esporte-total.com': {
+    password: 'loja123',
+    user: {
+      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+      email: 'dono@esporte-total.com',
+      name: 'Carlos Esporte - Esporte Total',
+      tenantId: '44444444-4444-4444-4444-444444444444',
+      tenantSlug: 'esporte-total',
+      tenantName: 'Esporte Total',
+      user_metadata: { name: 'Carlos Esporte - Esporte Total' }
+    }
+  },
+  'admin@beleza-natural.com': {
+    password: 'loja123',
+    user: {
+      id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
+      email: 'admin@beleza-natural.com',
+      name: 'Fernanda Beleza - Beleza Natural',
+      tenantId: '55555555-5555-5555-5555-555555555555',
+      tenantSlug: 'beleza-natural',
+      tenantName: 'Beleza Natural',
+      user_metadata: { name: 'Fernanda Beleza - Beleza Natural' }
+    }
+  },
+  'livreiro@livraria-saber.com': {
+    password: 'loja123',
+    user: {
+      id: '10101010-1010-1010-1010-101010101010',
+      email: 'livreiro@livraria-saber.com',
+      name: 'Pedro Livros - Livraria Saber',
+      tenantId: '66666666-6666-6666-6666-666666666666',
+      tenantSlug: 'livraria-saber',
+      tenantName: 'Livraria Saber',
+      user_metadata: { name: 'Pedro Livros - Livraria Saber' }
+    }
+  },
+  'veterinario@pet-shop-amigo.com': {
+    password: 'loja123',
+    user: {
+      id: '20202020-2020-2020-2020-202020202020',
+      email: 'veterinario@pet-shop-amigo.com',
+      name: 'Juliana Pet - Pet Shop Amigo',
+      tenantId: '77777777-7777-7777-7777-777777777777',
+      tenantSlug: 'pet-shop-amigo',
+      tenantName: 'Pet Shop Amigo',
+      user_metadata: { name: 'Juliana Pet - Pet Shop Amigo' }
+    }
+  },
+  'chef@gourmet-express.com': {
+    password: 'loja123',
+    user: {
+      id: '30303030-3030-3030-3030-303030303030',
+      email: 'chef@gourmet-express.com',
+      name: 'Ricardo Gourmet - Gourmet Express',
+      tenantId: '88888888-8888-8888-8888-888888888888',
+      tenantSlug: 'gourmet-express',
+      tenantName: 'Gourmet Express',
+      user_metadata: { name: 'Ricardo Gourmet - Gourmet Express' }
+    }
+  },
+  'jardineiro@jardim-verde.com': {
+    password: 'loja123',
+    user: {
+      id: '40404040-4040-4040-4040-404040404040',
+      email: 'jardineiro@jardim-verde.com',
+      name: 'Camila Verde - Jardim Verde',
+      tenantId: '99999999-9999-9999-9999-999999999999',
+      tenantSlug: 'jardim-verde',
+      tenantName: 'Jardim Verde',
+      user_metadata: { name: 'Camila Verde - Jardim Verde' }
+    }
+  },
+  'artista@arte-craft.com': {
+    password: 'loja123',
+    user: {
+      id: '50505050-5050-5050-5050-505050505050',
+      email: 'artista@arte-craft.com',
+      name: 'Lucas Arte - Arte & Craft',
+      tenantId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      tenantSlug: 'arte-craft',
+      tenantName: 'Arte & Craft',
+      user_metadata: { name: 'Lucas Arte - Arte & Craft' }
+    }
+  }
+};
+// Function to load dynamic credentials
+const loadDynamicCredentials = () => {
+  try {
+    const storedCredentials = localStorage.getItem('demo_credentials');
+    if (storedCredentials) {
+      const dynamicCredentials = JSON.parse(storedCredentials);
+      DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...dynamicCredentials };
+    }
+  } catch (error) {
+    console.warn('Error loading dynamic credentials:', error);
+  }
+};
+
+// Function to add new credentials dynamically
+const addDynamicCredential = (email: string, password: string, userData: any) => {
+  try {
+    const storedCredentials = localStorage.getItem('demo_credentials');
+    const existingCredentials = storedCredentials ? JSON.parse(storedCredentials) : {};
+    
+    const newCredentials = {
+      ...existingCredentials,
+      [email]: {
+        password,
+        user: userData
+      }
+    };
+    
+    localStorage.setItem('demo_credentials', JSON.stringify(newCredentials));
+    DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...newCredentials };
+    
+    console.log('Added new credential for:', email);
+  } catch (error) {
+    console.error('Error adding dynamic credential:', error);
+  }
+};
+
+// Export the function so it can be used by other components
+export { addDynamicCredential };
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchTenants = async () => {
+  const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('tenants')
-        .select(`
-          *,
-          subscription:tenant_subscriptions(plan, status, price_monthly)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTenants(data || []);
-    } catch (err) {
-      console.error('Error fetching tenants:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch tenants');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createTenant = async (tenantData: CreateTenantData) => {
-    try {
-      console.log('Creating tenant with data:', tenantData);
+      console.log('Attempting sign in for:', email);
       
-      // Try to create with real user first, fallback to self-registration
-      return await createTenantWithRealUser(tenantData);
-    } catch (err) {
-      console.error('Error creating tenant:', err);
-      throw new Error(err instanceof Error ? err.message : 'Failed to create tenant');
-    }
-  };
-
-  const createTenantWithRealUser = async (tenantData: CreateTenantData) => {
-    try {
-      console.log('Creating tenant with real user...');
+      // Load dynamic credentials first
+      loadDynamicCredentials();
       
-      // Use admin client to bypass RLS
-      const adminClient = createAdminClient();
+      // Check if this is a demo credential first (more reliable for this environment)
+      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
+      if (demoCredential && demoCredential.password === password) {
+        console.log('✅ Demo login successful for:', email);
+        console.log('User data:', demoCredential.user);
+        setUser(demoCredential.user);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
+        
+        return { data: { user: demoCredential.user }, error: null };
+      }
       
-      // 1. Create user in Supabase Auth
-      const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
-        email: tenantData.adminEmail,
-        password: tenantData.adminPassword,
-        email_confirm: true,
-        user_metadata: { 
-          name: tenantData.adminName,
-          role: 'tenant_owner'
-        }
+      // Try Supabase auth first
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      if (authError) {
-        console.error('Error creating user:', authError);
-        // If user creation fails, fallback to self-registration
-        return await createTenantForSelfRegistration(tenantData);
+      if (!error && data.user) {
+        console.log('✅ Supabase login successful for:', email);
+        
+        // Fetch user profile
+        const { data: profile, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profileError) {
+          console.warn('Profile not found, creating one:', profileError);
+          // Create profile if it doesn't exist
+          await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              name: data.user.user_metadata?.name || data.user.email!.split('@')[0]
+            });
+        }
+
+        // Check if user is admin
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', data.user.id)
+          .single();
+
+        // Get user's tenant info
+        const { data: tenantUser } = await supabase
+          .from('tenant_users')
+          .select(`
+            *,
+            tenant:tenants(*)
+          `)
+          .eq('user_id', data.user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        console.log('Tenant user data:', tenantUser);
+        console.log('Admin user data:', adminUser);
+
+        const userData = {
+          id: data.user.id,
+          email: data.user.email!,
+          name: profile?.name || data.user.user_metadata?.name || data.user.email!.split('@')[0],
+          avatar_url: profile?.avatar_url || data.user.user_metadata?.avatar_url,
+          isAdmin: !!adminUser,
+          tenantId: tenantUser?.tenant?.id,
+          tenantSlug: tenantUser?.tenant?.slug,
+          tenantName: tenantUser?.tenant?.name,
+          user_metadata: data.user.user_metadata
+        };
+        
+        console.log('Final user data:', userData);
+        setUser(userData);
+        return { data, error: null };
       }
 
-      console.log('User created successfully:', authUser.user.id);
+      // If Supabase auth failed and no demo credential found
+      console.log('Both Supabase auth and demo credentials failed');
+      console.error('Supabase auth error:', error);
+      console.log('Available demo emails:', Object.keys(DEMO_CREDENTIALS));
+      
+      // If both methods failed, throw error
+      throw new Error('Credenciais inválidas');
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { data: null, error };
+    }
+  };
 
-      // 2. Create user profile
-      const { error: profileError } = await adminClient
+  const signUp = async (email: string, password: string, name?: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) return { data: null, error };
+
+    if (data.user) {
+      // Create user profile
+      await supabase
         .from('users')
         .insert({
-          id: authUser.user.id,
-          email: tenantData.adminEmail,
-          name: tenantData.adminName
+          id: data.user.id,
+          email: data.user.email!,
+          name,
         });
+    }
+    
+    return { data, error: null };
+  };
 
-      if (profileError) {
-        console.warn('Error creating user profile:', profileError);
-      }
-
-      // 1. Create tenant without owner_id (will be set when user registers)
-      const { data: tenant, error: tenantError } = await adminClient
-        .from('tenants')
-        .insert([{
-          name: tenantData.name,
-          slug: tenantData.slug,
-          description: tenantData.description || '',
-          status: tenantData.status,
-          owner_id: authUser.user.id, // Set real user as owner
-          settings: tenantData.settings,
-          contract_duration_days: tenantData.contractDurationDays || 30
-        }])
-        .select()
-        .single();
-
-      if (tenantError) {
-        console.error('Error creating tenant:', tenantError);
-        throw tenantError;
-      }
-
-      console.log('Tenant created:', tenant);
-
-      // 3. Create tenant_users relationship
-      const { error: tenantUserError } = await adminClient
-        .from('tenant_users')
-        .insert([{
-          tenant_id: tenant.id,
-          user_id: authUser.user.id,
-          role: 'owner',
-          is_active: true
-        }]);
-
-      if (tenantUserError) {
-        console.warn('Error creating tenant user relationship:', tenantUserError);
-      }
-
-      // 4. Create subscription
-      const { error: subscriptionError } = await adminClient
-        .from('tenant_subscriptions')
-        .insert([{
-          tenant_id: tenant.id,
-          plan: 'free',
-          status: 'active',
-          price_monthly: 0,
-          features: {
-            max_products: 100,
-            max_variations: 500,
-            custom_domain: false,
-            analytics: true
-          },
-          limits: {
-            products: 100,
-            variations: 500,
-            storage_gb: 1
-          }
-        }]);
-
-      if (subscriptionError) {
-        console.warn('Error creating subscription:', subscriptionError);
-      }
-
-      // 2. Create store customization
-      const { error: customizationError } = await adminClient
-        .from('store_customizations')
-        .insert([{
-          tenant_id: tenant.id,
-          primary_color: '#3B82F6',
-          background_color: '#FFFFFF',
-          text_color: '#1F2937',
-          accent_color: '#EFF6FF',
-          font_family: 'Inter',
-          font_size_base: 16,
-          layout_style: 'modern'
-        }]);
-
-      if (customizationError) {
-        console.warn('Error creating customization:', customizationError);
-      }
-
-      await fetchTenants();
-
-      return {
-        success: true,
-        message: `Loja "${tenantData.name}" criada com sucesso! Usuário real criado no Supabase.`,
-        data: {
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug,
-          user_id: authUser.user.id,
-          admin_email: tenantData.adminEmail,
-          real_user_created: true
-        }
-      };
+  const signOut = async () => {
+    // Clear demo user from localStorage
+    localStorage.removeItem('demo_user');
+    
+    // Also try to sign out from Supabase
+    try {
+      await supabase.auth.signOut();
     } catch (error) {
-      console.error('Error in tenant creation with real user:', error);
-      throw error;
+      console.warn('Supabase signout error (expected for demo users):', error);
     }
-  };
-
-  const createTenantForSelfRegistration = async (tenantData: CreateTenantData) => {
-    try {
-      console.log('Fallback: Creating tenant for self-registration...');
-      
-      // Use admin client to bypass RLS
-      const adminClient = createAdminClient();
-      
-      // 1. Create tenant without owner_id (will be set when user registers)
-      const { data: tenant, error: tenantError } = await adminClient
-        .from('tenants')
-        .insert([{
-          name: tenantData.name,
-          slug: tenantData.slug,
-          description: tenantData.description || '',
-          status: tenantData.status,
-          owner_id: null, // Will be set when user registers
-          settings: tenantData.settings,
-          contract_duration_days: tenantData.contractDurationDays || 30
-        }])
-        .select()
-        .single();
-
-      if (tenantError) {
-        console.error('Error creating tenant:', tenantError);
-        throw tenantError;
-      }
-
-      console.log('Tenant created for self-registration:', tenant);
-
-      // 2. Create store customization
-      const { error: customizationError } = await adminClient
-        .from('store_customizations')
-        .insert([{
-          tenant_id: tenant.id,
-          primary_color: '#3B82F6',
-          background_color: '#FFFFFF',
-          text_color: '#1F2937',
-          accent_color: '#EFF6FF',
-          font_family: 'Inter',
-          font_size_base: 16,
-          layout_style: 'modern'
-        }]);
-
-      if (customizationError) {
-        console.warn('Error creating customization:', customizationError);
-      }
-
-      await fetchTenants();
-
-      return {
-        success: true,
-        message: `Loja "${tenantData.name}" criada! Envie este link para o administrador se registrar:`,
-        data: {
-          tenant_id: tenant.id,
-          tenant_slug: tenant.slug,
-          registration_url: `/auth/signup?tenant=${tenant.slug}&email=${encodeURIComponent(tenantData.adminEmail)}`,
-          self_registration: true
-        }
-      };
-    } catch (error) {
-      console.error('Error in tenant creation for self-registration:', error);
-      throw error;
-    }
-  };
-
-  const updateTenant = async (id: string, updates: Partial<Tenant>) => {
-    try {
-      const { data, error } = await supabase
-        .from('tenants')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      await fetchTenants();
-      return data;
-    } catch (err) {
-      console.error('Error updating tenant:', err);
-      throw new Error('Failed to update tenant');
-    }
-  };
-
-  const deleteTenant = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('tenants')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      await fetchTenants();
-    } catch (err) {
-      console.error('Error deleting tenant:', err);
-      throw new Error('Failed to delete tenant');
-    }
+    
+    setUser(null);
   };
 
   useEffect(() => {
-    fetchTenants();
+    const initializeAuth = async () => {
+      try {
+        // Load dynamic credentials
+        loadDynamicCredentials();
+        
+        console.log('Available credentials:', Object.keys(DEMO_CREDENTIALS));
+        
+        // Check for demo user in localStorage first
+        const demoUser = localStorage.getItem('demo_user');
+        if (demoUser) {
+          const userData = JSON.parse(demoUser);
+          console.log('Restored demo user from localStorage:', userData.email);
+          setUser(userData);
+          setLoading(false);
+          return;
+        }
+        
+        // Get initial session from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          // Fetch user profile and set user state
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          // Check if user is admin
+          const { data: adminUser } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+
+          // Get user's tenant info
+          const { data: tenantUser } = await supabase
+            .from('tenant_users')
+            .select(`
+              *,
+              tenant:tenants(*)
+            `)
+            .eq('user_id', session.user.id)
+            .eq('is_active', true)
+            .single();
+
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: profile?.name,
+            avatar_url: profile?.avatar_url,
+            isAdmin: !!adminUser,
+            tenantId: tenantUser?.tenant?.id,
+            tenantSlug: tenantUser?.tenant?.slug,
+            tenantName: tenantUser?.tenant?.name,
+            user_metadata: session.user.user_metadata
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      }
+      setLoading(false);
+    };
+    
+    initializeAuth();
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
+      
+      // Skip auth state changes for demo users
+      const demoUser = localStorage.getItem('demo_user');
+      if (demoUser) {
+        return;
+      }
+      
+      if (session?.user) {
+        // Fetch user profile and set user state
+        const { data: profile } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        // Check if user is admin
+        const { data: adminUser } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        // Get user's tenant info
+        const { data: tenantUser } = await supabase
+          .from('tenant_users')
+          .select(`
+            *,
+            tenant:tenants(*)
+          `)
+          .eq('user_id', session.user.id)
+          .eq('is_active', true)
+          .single();
+
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: profile?.name,
+          avatar_url: profile?.avatar_url,
+          isAdmin: !!adminUser,
+          tenantId: tenantUser?.tenant?.id,
+          tenantSlug: tenantUser?.tenant?.slug,
+          tenantName: tenantUser?.tenant?.name,
+          user_metadata: session.user.user_metadata
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  return {
-    tenants,
+  const value: AuthContextType = {
+    user,
     loading,
-    error,
-    fetchTenants,
-    createTenant,
-    updateTenant,
-    deleteTenant,
+    signIn,
+    signUp,
+    signOut,
   };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

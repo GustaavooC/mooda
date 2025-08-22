@@ -207,40 +207,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('Attempting sign in for:', email);
       
-      // Load dynamic credentials first
-      loadDynamicCredentials();
-      
-      console.log('All available credentials:', Object.keys(DEMO_CREDENTIALS));
-      
-      // Check demo credentials first
-      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
-      if (demoCredential && demoCredential.password === password) {
-        console.log('✅ Demo login successful for:', email);
-        console.log('User data:', demoCredential.user);
-        setUser(demoCredential.user);
-        
-        // Store in localStorage for persistence
-        localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
-        
-        return { data: { user: demoCredential.user }, error: null };
-      } else {
-        console.log('❌ Demo credential not found or password mismatch for:', email);
-        console.log('Available emails:', Object.keys(DEMO_CREDENTIALS));
-      }
-      
-      // If not demo credentials, try Supabase auth
+      // Try Supabase auth first
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        console.error('Supabase auth error:', error);
-        throw new Error('Credenciais inválidas');
-      }
-
-      if (data.user) {
-        console.log('Supabase login successful for:', email);
+      if (!error && data.user) {
+        console.log('✅ Supabase login successful for:', email);
         
         // Fetch user profile
         const { data: profile, error: profileError } = await supabase
@@ -298,8 +272,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(userData);
         return { data, error: null };
       }
+
+      // If Supabase auth failed, try demo credentials as fallback
+      console.log('Supabase auth failed, trying demo credentials...');
+      console.error('Supabase auth error:', error);
       
-      return { data, error };
+      // Load dynamic credentials
+      loadDynamicCredentials();
+      
+      console.log('All available demo credentials:', Object.keys(DEMO_CREDENTIALS));
+      
+      // Check demo credentials as fallback
+      const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
+      if (demoCredential && demoCredential.password === password) {
+        console.log('✅ Demo login successful for:', email);
+        console.log('User data:', demoCredential.user);
+        setUser(demoCredential.user);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
+        
+        return { data: { user: demoCredential.user }, error: null };
+      } else {
+        console.log('❌ Demo credential not found or password mismatch for:', email);
+        console.log('Available demo emails:', Object.keys(DEMO_CREDENTIALS));
+      }
+      
+      // If both Supabase and demo failed, throw error
+      throw new Error('Credenciais inválidas');
     } catch (error) {
       console.error('Sign in error:', error);
       return { data: null, error };

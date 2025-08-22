@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { addDynamicCredential } from './useAuth';
 import axios from 'axios';
 
 export interface Tenant {
@@ -124,18 +125,19 @@ export const useTenants = () => {
 
       console.log('Tenant created:', tenant);
 
-      // 2. Criar usuário admin via API
-      try {
-        const response = await axios.post('/api/createTenantUser', {
-          email: tenantData.adminEmail,
-          password: tenantData.adminPassword,
-          name: tenantData.adminName,
-          tenantId: tenant.id
-        });
+      // 2. Criar credenciais demo para o novo usuário
+      const newUserData = {
+        id: `user-${tenant.id}`,
+        email: tenantData.adminEmail,
+        name: tenantData.adminName,
+        tenantId: tenant.id,
+        tenantSlug: tenant.slug,
+        tenantName: tenant.name,
+        user_metadata: { name: tenantData.adminName }
+      };
 
-        if (response.data.error) {
-          throw new Error(response.data.error);
-        }
+      // Adicionar as credenciais ao sistema de demo
+      addDynamicCredential(tenantData.adminEmail, tenantData.adminPassword, newUserData);
 
         // 3. Criar customização da loja
         const { error: customizationError } = await supabase
@@ -159,18 +161,13 @@ export const useTenants = () => {
 
         return {
           success: true,
-          message: 'Loja criada com sucesso! Credenciais de acesso configuradas.',
+          message: `Loja criada com sucesso! O usuário pode fazer login com: ${tenantData.adminEmail} / ${tenantData.adminPassword}`,
           data: {
             tenant_id: tenant.id,
-            user_id: response.data.user.id,
+            user_id: newUserData.id,
             subscription_id: null
           }
         };
-      } catch (error) {
-        // Se falhar na criação do usuário, deletar o tenant
-        await supabase.from('tenants').delete().eq('id', tenant.id);
-        throw error;
-      }
     } catch (error) {
       console.error('Error in manual tenant creation:', error);
       throw error;

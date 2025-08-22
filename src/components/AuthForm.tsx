@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Store, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 interface AuthFormProps {
   mode: 'signin' | 'signup' | 'admin';
@@ -11,9 +11,10 @@ interface AuthFormProps {
 const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: searchParams.get('email') || '',
+    password: searchParams.get('password') || '',
     confirmPassword: '',
     name: '',
     storeName: '',
@@ -22,6 +23,28 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Auto-fill and focus if URL params are present
+  React.useEffect(() => {
+    const email = searchParams.get('email');
+    const password = searchParams.get('password');
+    
+    if (email && password) {
+      setFormData(prev => ({
+        ...prev,
+        email,
+        password
+      }));
+      
+      // Show a message that credentials were pre-filled
+      setTimeout(() => {
+        const submitButton = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+        if (submitButton) {
+          submitButton.focus();
+        }
+      }, 100);
+    }
+  }, [searchParams]);
 
   // Auto-gerar slug da loja
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,6 +222,16 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
         {/* Demo Credentials (não exibe no signup) */}
         {mode !== 'signup' && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            {searchParams.get('email') && searchParams.get('password') && (
+              <div className="mb-3 p-2 bg-green-100 border border-green-300 rounded">
+                <p className="text-sm text-green-800 font-medium">
+                  ✅ Credenciais pré-preenchidas automaticamente
+                </p>
+                <p className="text-xs text-green-700">
+                  Clique em "Entrar" para fazer login
+                </p>
+              </div>
+            )}
             <h3 className="text-sm font-medium text-blue-800 mb-2">🎯 Credenciais Demo:</h3>
             <div className="text-sm text-blue-700 mb-3">
               <p><strong>Email:</strong> {getDemoCredentials().email}</p>
@@ -399,7 +432,10 @@ const AuthForm: React.FC<AuthFormProps> = ({ mode, onSuccess }) => {
               <div><strong>Arte:</strong> artista@arte-craft.com / loja123</div>
               <div className="pt-2 border-t border-gray-300 mt-3">
                 <p className="text-xs text-blue-600 font-medium">
-                  💡 Dica: Lojas criadas pelo admin podem fazer login com as credenciais definidas na criação
+                  💡 Dica: Lojas criadas pelo admin são automaticamente adicionadas ao sistema de login
+                </p>
+                <p className="text-xs text-green-600 mt-1">
+                  ✅ Credenciais de lojas criadas ficam disponíveis imediatamente
                 </p>
               </div>
             </div>

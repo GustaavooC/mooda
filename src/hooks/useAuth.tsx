@@ -173,6 +173,32 @@ const loadDynamicCredentials = () => {
   }
 };
 
+// Function to add new credentials dynamically
+const addDynamicCredential = (email: string, password: string, userData: any) => {
+  try {
+    const storedCredentials = localStorage.getItem('demo_credentials');
+    const existingCredentials = storedCredentials ? JSON.parse(storedCredentials) : {};
+    
+    const newCredentials = {
+      ...existingCredentials,
+      [email]: {
+        password,
+        user: userData
+      }
+    };
+    
+    localStorage.setItem('demo_credentials', JSON.stringify(newCredentials));
+    DEMO_CREDENTIALS = { ...DEMO_CREDENTIALS, ...newCredentials };
+    
+    console.log('Added new credential for:', email);
+  } catch (error) {
+    console.error('Error adding dynamic credential:', error);
+  }
+};
+
+// Export the function so it can be used by other components
+export { addDynamicCredential };
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,16 +210,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Load dynamic credentials first
       loadDynamicCredentials();
       
+      console.log('All available credentials:', Object.keys(DEMO_CREDENTIALS));
+      
       // Check demo credentials first
       const demoCredential = DEMO_CREDENTIALS[email as keyof typeof DEMO_CREDENTIALS];
       if (demoCredential && demoCredential.password === password) {
-        console.log('Demo login successful for:', email);
+        console.log('✅ Demo login successful for:', email);
+        console.log('User data:', demoCredential.user);
         setUser(demoCredential.user);
         
         // Store in localStorage for persistence
         localStorage.setItem('demo_user', JSON.stringify(demoCredential.user));
         
         return { data: { user: demoCredential.user }, error: null };
+      } else {
+        console.log('❌ Demo credential not found or password mismatch for:', email);
+        console.log('Available emails:', Object.keys(DEMO_CREDENTIALS));
       }
       
       // If not demo credentials, try Supabase auth
@@ -315,6 +347,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         // Load dynamic credentials
         loadDynamicCredentials();
+        
+        console.log('Available credentials:', Object.keys(DEMO_CREDENTIALS));
         
         // Check for demo user in localStorage first
         const demoUser = localStorage.getItem('demo_user');

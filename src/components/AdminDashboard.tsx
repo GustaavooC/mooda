@@ -26,6 +26,98 @@ import { useAuth } from '../hooks/useAuth';
 import { useContract } from '../hooks/useContract';
 import ContractStatusCard from './ContractStatusCard';
 
+// Component to show active credentials
+const ActiveCredentialsCard: React.FC = () => {
+  const [credentials, setCredentials] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const loadCredentials = () => {
+      try {
+        const stored = localStorage.getItem('demo_credentials');
+        if (stored) {
+          setCredentials(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.error('Error loading credentials:', error);
+      }
+    };
+
+    loadCredentials();
+    
+    // Listen for storage changes
+    const handleStorageChange = () => loadCredentials();
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const credentialEntries = Object.entries(credentials);
+
+  if (credentialEntries.length === 0) {
+    return null;
+  }
+
+  const testCredential = (email: string, password: string) => {
+    // Fill the demo credentials in the login form
+    const loginUrl = `/auth/signin?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`;
+    window.open(loginUrl, '_blank');
+  };
+
+  const clearAllCredentials = () => {
+    if (window.confirm('Tem certeza que deseja limpar todas as credenciais de lojas criadas?')) {
+      localStorage.removeItem('demo_credentials');
+      setCredentials({});
+      alert('Credenciais limpas com sucesso!');
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Credenciais de Lojas Criadas ({credentialEntries.length})
+        </h3>
+        {credentialEntries.length > 0 && (
+          <button
+            onClick={clearAllCredentials}
+            className="px-3 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+          >
+            Limpar Todas
+          </button>
+        )}
+      </div>
+      <div className="space-y-3">
+        {credentialEntries.map(([email, data]) => (
+          <div key={email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium text-gray-900">{data.user.name}</p>
+              <p className="text-sm text-gray-600">{email}</p>
+              <p className="text-xs text-gray-500">Loja: {data.user.tenantName}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+              <p className="text-sm font-mono text-blue-600">{data.password}</p>
+              <p className="text-xs text-gray-500">Senha</p>
+              <button
+                onClick={() => testCredential(email, data.password)}
+                className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                title="Testar login"
+              >
+                Testar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          💡 Estas credenciais estão ativas e podem ser usadas para login imediatamente.
+        </p>
+      </div>
+    </div>
+  );
+};
+
 interface NewTenantForm {
   name: string;
   slug: string;
@@ -386,6 +478,9 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Active Credentials */}
+        <ActiveCredentialsCard />
+
         {/* Tenants Management */}
         <div className="bg-white rounded-lg shadow-sm border">
           <div className="p-6 border-b">
@@ -559,13 +654,15 @@ const AdminDashboard: React.FC = () => {
                       <p><strong>Email:</strong> {newTenantForm.adminEmail}</p>
                       <p><strong>Senha:</strong> {newTenantForm.adminPassword}</p>
                     </div>
-                    <p className="text-xs text-green-600 mt-2">
-                      ✅ As credenciais foram configuradas automaticamente no sistema
-                    </p>
+                    <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-xs text-blue-700 font-medium">
+                        ✅ Credenciais configuradas! O lojista pode fazer login imediatamente.
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        URL de acesso: <span className="font-mono">/auth/signin</span>
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-blue-600 mt-4 text-center">
-                    🎉 O lojista já pode fazer login com essas credenciais!
-                  </p>
                 </div>
               ) : (
                 <div className="space-y-6">

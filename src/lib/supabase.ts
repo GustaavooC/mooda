@@ -16,6 +16,22 @@ try {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Create admin client for admin operations
+export const createAdminClient = () => {
+  const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (serviceRoleKey && serviceRoleKey !== supabaseAnonKey) {
+    return createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
+  
+  return supabase;
+};
+
 export type Database = {
   public: {
     Tables: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Store, 
@@ -96,8 +96,9 @@ const ActiveCredentialsCard: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-              <p className="text-sm font-mono text-blue-600">{data.password}</p>
-              <p className="text-xs text-gray-500">Senha</p>
+                <p className="text-sm font-mono text-blue-600">{data.password}</p>
+                <p className="text-xs text-gray-500">Senha</p>
+              </div>
               <button
                 onClick={() => testCredential(email, data.password)}
                 className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -105,6 +106,28 @@ const ActiveCredentialsCard: React.FC = () => {
               >
                 Testar
               </button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          💡 Estas credenciais estão ativas e podem ser usadas para login imediatamente.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+interface NewTenantForm {
+  name: string;
+  slug: string;
+  description: string;
+  adminEmail: string;
+  adminName: string;
+  adminPassword: string;
+  contractDurationDays: number;
+}
             </div>
           </div>
         ))}
@@ -284,66 +307,66 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleCreateTenant = async () => {
-  if (!validateForm()) return;
+    if (!validateForm()) return;
 
-  setCreateLoading(true);
-  setCreateError(null);
+    setCreateLoading(true);
+    setCreateError(null);
 
-  try {
-    console.log('Creating tenant with data:', newTenantForm);
-    
-    // Chama o createTenant com os dados necessários
-    const result = await createTenant({
-      name: newTenantForm.name,
-      slug: newTenantForm.slug,
-      description: newTenantForm.description,
-      status: 'active', // ou o status que você quiser definir
-      settings: {
-        theme: 'default',
-        currency: 'BRL',
-        colors: {
-          primary: '#3B82F6',
-          secondary: '#EFF6FF'
-        }
-      },
-      adminEmail: newTenantForm.adminEmail,
-      adminName: newTenantForm.adminName,
-      adminPassword: newTenantForm.adminPassword,
-      contractDurationDays: newTenantForm.contractDurationDays
-    });
-
-    if (!result.success) {
-      throw new Error(result.message || 'Erro ao criar loja');
-    }
-
-    console.log('Tenant created successfully:', result);
-    
-    // Mostra mensagem de sucesso
-    setCreateSuccess(true);
-    
-    // Reseta o formulário após 3 segundos
-    setTimeout(() => {
-      setCreateSuccess(false);
-      setShowCreateModal(false);
-      setNewTenantForm({
-        name: '',
-        slug: '',
-        description: '',
-        adminEmail: '',
-        adminName: '',
-        adminPassword: 'loja123',
-        contractDurationDays: 30
+    try {
+      console.log('Creating tenant with data:', newTenantForm);
+      
+      // Chama o createTenant com os dados necessários
+      const result = await createTenant({
+        name: newTenantForm.name,
+        slug: newTenantForm.slug,
+        description: newTenantForm.description,
+        status: 'active', // ou o status que você quiser definir
+        settings: {
+          theme: 'default',
+          currency: 'BRL',
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#EFF6FF'
+          }
+        },
+        adminEmail: newTenantForm.adminEmail,
+        adminName: newTenantForm.adminName,
+        adminPassword: newTenantForm.adminPassword,
+        contractDurationDays: newTenantForm.contractDurationDays
       });
-      fetchTenants(); // Atualiza a lista de tenants
-    }, 3000);
 
-  } catch (error) {
-    console.error('Error creating tenant:', error);
-    setCreateError(error instanceof Error ? error.message : 'Erro ao criar loja');
-  } finally {
-    setCreateLoading(false);
-  }
-};
+      if (!result.success) {
+        throw new Error(result.message || 'Erro ao criar loja');
+      }
+
+      console.log('Tenant created successfully:', result);
+      
+      // Mostra mensagem de sucesso
+      setCreateSuccess(true);
+      
+      // Reseta o formulário após 3 segundos
+      setTimeout(() => {
+        setCreateSuccess(false);
+        setShowCreateModal(false);
+        setNewTenantForm({
+          name: '',
+          slug: '',
+          description: '',
+          adminEmail: '',
+          adminName: '',
+          adminPassword: 'loja123',
+          contractDurationDays: 30
+        });
+        fetchTenants(); // Atualiza a lista de tenants
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error creating tenant:', error);
+      setCreateError(error instanceof Error ? error.message : 'Erro ao criar loja');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {

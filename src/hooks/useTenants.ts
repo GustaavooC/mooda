@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { addDynamicCredential } from './useAuth';
 import axios from 'axios';
+
+// Create admin client with service role key
+const supabaseAdmin = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 export interface Tenant {
   id: string;
